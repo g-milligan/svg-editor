@@ -135,3 +135,16 @@ function restoreInlineStyles(elem){
 		}
 	}
 }
+//generic replace all function
+function replaceAll(theStr, charToReplace, replaceWith) {
+    if(theStr != undefined){
+        if(charToReplace==undefined){charToReplace='';}
+        if(replaceWith==undefined){replaceWith='';}
+        if(charToReplace!=replaceWith){
+            while(theStr.indexOf(charToReplace)!=-1){
+                theStr=theStr.replace(charToReplace,replaceWith);
+            }
+        }
+    }else{theStr='';}
+    return theStr;
+}
