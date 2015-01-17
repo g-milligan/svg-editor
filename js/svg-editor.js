@@ -59,8 +59,12 @@ function designToSrc(design){
 			//depending on tag type, add different markup around it
 			var matchedTagStr=matchedHtmlTags[t];
 			var info=getTagInfo(matchedTagStr);
+			//depending on open/close...
+			var startGroup=''; var endGroup='';
+			if(info.open_close=='open'){startGroup='<g class="closed" n="'+info.name.toLowerCase()+'"><oc></oc>';}
+			else{endGroup='</g>';}
 			//replace tag with temporary placeholder, surronded by <e> element markup
-			design=design.replace(matchedTagStr,'<e n="'+info.name.toLowerCase()+'" class="'+info.open_close+'"><<'+t+'>></e>');
+			design=design.replace(matchedTagStr,startGroup+'<e n="'+info.name.toLowerCase()+'" class="'+info.open_close+'"><<'+t+'>></e>'+endGroup);
 			//insert the <t> markup around the tag name
 			matchedTagStr=matchedTagStr.replace(info.name,'<n>'+info.name+'</n>');
 			//if this is an open tag
@@ -141,9 +145,36 @@ function updateCode(){
 	currentDesignSrc=designToSrc(currentDesignSrc);
 	//if the code isn't updated
 	if(source!=currentDesignSrc){
-		//update the code
+		//==update code==
 		codeElem.html(currentDesignSrc);
-		//*** add wrappers around open and close <e> element tags
-		//*** add javascript events for editing source code
+		//==OPEN/CLOSE ELEMENT EVENTS==
+		var ocElems=codeElem.find('oc').not('.evs');
+		ocElems.addClass('evs');
+		ocElems.each(function(){
+			var gElem=jQuery(this).parent();
+			//if there are no child elements under this parent
+			var childElems=gElem.children('g');
+			if(childElems.length<1){
+				//element is empty
+				gElem.addClass('empty');
+				gElem.removeClass('opened');
+				gElem.removeClass('closed');
+			}
+			//open close button
+			jQuery(this).click(function(){
+				//if this <g> element is NOT empty
+				if(!gElem.hasClass('empty')){
+					//toggle opened/closed
+					if(gElem.hasClass('closed')){
+						gElem.addClass('opened');
+						gElem.removeClass('closed');
+					}else{
+						gElem.addClass('closed');
+						gElem.removeClass('opened');
+					}
+				}
+			});
+		});
+		//*** more events
 	}
 }

@@ -1,3 +1,12 @@
+#code g{display:block;position:relative;padding-left:.8em;}
+#code g g{margin-left:1.5em;}
+#code g > oc{display:inline-block;cursor:pointer;position:absolute;left:0;top:.1em;}
+#code g > oc:after{content:"";display:inline-block;width:0;height:0;border-style:solid;border-color:transparent;border-width:.45em;}
+#code g.closed > oc:after{border-left-color:#6e6e6e;border-left-width:.65em;}
+#code g.opened > oc:after{border-top-color:#6e6e6e;border-top-width:.65em;}
+#code g.empty > oc{display:none;}
+#code g.closed > g{display:none;}
+#code g.closed > e.open:after{content:"...";}
 #code e{color:#881280;}
 #code e n{}
 #code e kv{}
