@@ -61,11 +61,15 @@ function designToSrc(design){
 			var info=getTagInfo(matchedTagStr);
 			//depending on open/close...
 			var startGroup=''; var endGroup='';
-			if(info.open_close=='open'){startGroup='<g class="closed" n="'+info.name.toLowerCase()+'"><oc></oc>';}
+			if(info.open_close=='open'){
+				var firstXClass='';
+				if(t==0){firstXClass=' class="first"';}
+				startGroup='<x'+firstXClass+'><input type="text" /></x><g class="closed" n="'+info.name.toLowerCase()+'"><oc></oc>';
+			}
 			else{endGroup='</g>';}
 			//replace tag with temporary placeholder, surronded by <e> element markup
 			design=design.replace(matchedTagStr,startGroup+'<e n="'+info.name.toLowerCase()+'" class="'+info.open_close+'"><<'+t+'>></e>'+endGroup);
-			//insert the <t> markup around the tag name
+			//insert the <n> markup around the tag name
 			matchedTagStr=matchedTagStr.replace(info.name,'<n>'+info.name+'</n>');
 			//if this is an open tag
 			if(info.open_close=='open'){
@@ -76,11 +80,18 @@ function designToSrc(design){
 					//for each matched attribute
 					var newMatchedAttrs=[];
 					for(var a=0;a<matchedAttrs.length;a++){
-						var matchedAttr=matchedAttrs[a];
+						//if this is the first attribute
+						var beforeFirstAttr='';
+						if(a==0){beforeFirstAttr='<x class="first"><input type="text" /></x>';}
+						//if this is the last attribute
+						var lastXClass='';
+						if(a+1==matchedAttrs.length){lastXClass=' class="last"';}
+						//get the matched attribute string, prefixed by a space
+						var matchedAttr=' '+matchedAttrs[a];
 						//replace the attribute with a temporary placeholder
-						matchedTagStr=matchedTagStr.replace(matchedAttr,'<kv>>>'+a+'<<</kv>');
+						matchedTagStr=matchedTagStr.replace(matchedAttr,beforeFirstAttr+'<kv>>>'+a+'<<</kv><x'+lastXClass+'><input type="text" /></x>');
 						//surround the attribute key with markup
-						matchedAttr='<k>'+matchedAttr;
+						matchedAttr='<k><space> </space>'+matchedAttr.trim();
 						matchedAttr=matchedAttr.replace('=','</k>=');
 						//surround the val with markup
 						var valStr=matchedAttr.substring(matchedAttr.indexOf('=')+'='.length);
@@ -102,6 +113,11 @@ function designToSrc(design){
 						//restore the attribute
 						matchedTagStr=matchedTagStr.replace('>>'+a+'<<',newMatchedAttrs[a]);
 					}
+				}else{
+					//no attributes in this open tag...
+					//insert the <x> element after the tag name
+					matchedTagStr=matchedTagStr.replace('</n>','|____n____|<x class="first last"><input type="text" /></x>');
+					matchedTagStr=matchedTagStr.replace('|____n____|','</n>');
 				}
 			}
 			//push the possibly modified tag html into a new array
@@ -147,6 +163,22 @@ function updateCode(){
 	if(source!=currentDesignSrc){
 		//==update code==
 		codeElem.html(currentDesignSrc);
+		//==ADD ADDITIONAL <x> ELEMENTS==
+		var gElems=codeElem.find('g').not('.evs');
+		gElems.addClass('evs');
+		gElems.each(function(){
+			//add the last <x> element after the last <g> and before the closing e.close
+			var closeElem=jQuery(this).children('e.close:last');
+			closeElem.before('<x class="last"><input type="text" /></x>');
+			//add the first class to the first x element nested inside this group
+			jQuery(this).children('x:first').addClass('first');
+		});
+		//if the code doesn't end with an <x> element
+		var lastChild=codeElem.children().filter(':last');
+		if(lastChild[0].tagName.toLowerCase()!='x'){
+			//make sure the code element ends with a <x> element
+			codeElem.append('<x class="last"><input type="text" /></x>');
+		}
 		//==OPEN/CLOSE ELEMENT EVENTS==
 		var ocElems=codeElem.find('oc').not('.evs');
 		ocElems.addClass('evs');
