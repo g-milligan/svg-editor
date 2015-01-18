@@ -230,8 +230,9 @@ function updateCode(){
 						//if this button has the focus class still
 						var btn=jQuery(this);
 						if(btn.hasClass('focus')){
-							//remove the focus class
+							//remove the focus and over classes
 							btn.removeClass('focus');
+							btn.removeClass('over');
 							//get <txt>
 							var txtElem=btn.children('txt:first');
 							//get new text
@@ -706,6 +707,11 @@ function updateCode(){
 					//***
 					break;
 				default:
+					//if a special key, like the apple command key (different code on different systems) is NOT being pressed
+					if(!isSpecialKeyHeld(e)){
+						//before keyup... delete selected letters, if any
+						deleteSelectedLetters();
+					}
 					break;
 			}
 		});
@@ -718,6 +724,9 @@ function updateCode(){
 		//click event
 		btnElems.click(function(e){
 			var btn=jQuery(this);
+			//set the focus of this hidden <input> (make sure it's set)
+			var focusInput=btn.children('input:last');
+			focusInput.focus();
 			//if NOT already has double click class
 			var isDblClick=false;
 			if(!btn.hasClass('dbl-click')){
@@ -742,9 +751,6 @@ function updateCode(){
 				if(!btn.hasClass('focus')){
 					//set the focus class of this element
 					btn.addClass('focus');
-					//set the focus of this hidden <input>
-					var focusInput=btn.children('input:last');
-					focusInput.focus();
 					//clear previous focus (but keep focus on btn)
 					clearFocus(btn);
 					//if there is existing text being modified
