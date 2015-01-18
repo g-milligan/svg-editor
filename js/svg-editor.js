@@ -282,14 +282,107 @@ function updateCode(){
 		};
 		//function to add events to new <l>etter elements
 		var evsLetters=function(txtElem){
-			//click events for <l> each letter
+			//if the text element doesn't already have events
+			if(!txtElem.hasClass('evs')){
+				var letter_down_timeout;
+				txtElem.addClass('evs');
+				//detect when mouse is down over the text element
+				txtElem.mousedown(function(){
+					//deselect previous selection
+					jQuery(this).children('.sel').removeClass('sel');
+				});
+				var txtMouseUp=function(){
+					//cancel letter down, if any
+					clearTimeout(letter_down_timeout);
+					//if mouse down selection was active
+					if(txtElem.hasClass('mouse-down')){
+						//end: disable selection, indicate mouse up
+						txtElem.removeClass('mouse-down');
+						//restore cursor (at one of the selection ends, right or left)
+						//***
+						//reset the initial down letter
+						txtElem.children('l.down').removeClass('down');
+					}
+				};
+				txtElem.mouseup(function(){txtMouseUp();});
+				txtElem.mouseleave(function(){txtMouseUp();});
+			}
+			//events for <l> each letter
 			var lElems=txtElem.children('l').not('evs');
 			lElems.addClass('evs');
+			//drag
+			var letter_drag_timeout;
+			var letterDragSelect=function(lElem){
+				//if dragging, mouse is down over text
+				var txtParent=lElem.parent();
+				if(txtParent.hasClass('mouse-down')){
+					//after a delay
+					clearTimeout(letter_drag_timeout);
+					letter_drag_timeout=setTimeout(function(){
+						//if this letter was the first letter mousedown
+						if(lElem.hasClass('down')){
+							//this should be the only selected element
+							txtParent.children('l.down').not(lElem).removeClass('sel');
+							//select the down element, if not already selected
+							if(!lElem.hasClass('sel')){lElem.addClass('sel');}
+						}else{
+							//the current mouseover letter isn't the inital mousedown letter...
+
+							//get the first down letter (l.down should exist)
+							var downLetter=txtParent.children('l.down:first');
+							if(downLetter.length>0){
+								//get down <l> element index and the current <l> index
+								var downIndex=downLetter.index();
+								var currentIndex=lElem.index();
+								//get all of the letter elements
+								var lElems=txtParent.children();
+								//if the mouseenter letter is AFTER the initial mouse down letter
+								if(downIndex<currentIndex){
+									//add "drag" class between the downLetter and the lElem, current letter
+									for(var d=downIndex;d<=currentIndex;d++){lElems.eq(d).addClass('drag');}
+								}else{
+									//mouseenter letter is BEFORE the initial mouse down letter...
+									//add "drag" class between the downLetter and the lElem, current letter
+									for(var d=currentIndex;d<=downIndex;d++){lElems.eq(d).addClass('drag');}
+								}
+								//remove extranious sel classes (if any)
+								lElems.filter('.sel').not('.drag').removeClass('sel');
+								//make sure sel classes are added to the drag selected letters
+								lElems.filter('.drag').not('.sel').addClass('sel');
+								lElems.filter('.drag').removeClass('drag');
+							}
+						}
+					},10);
+				}
+			};
+			//mouse down
+			lElems.mousedown(function(e){
+				var liElem=jQuery(this);
+				liElem.parent().children('.down').removeClass('down');
+				liElem.addClass('down');
+				//delay before start select first letter
+				clearTimeout(letter_down_timeout);
+				letter_down_timeout=setTimeout(function(){
+					//if the drag has NOT already been initiated
+					if(!liElem.parent().hasClass('mouse-down')){
+						//start: enable selection, indicate mouse down
+						liElem.parent().addClass('mouse-down');
+						//remove cursor temporarily
+						liElem.parent().children('.cursor').removeClass('cursor').removeClass('before');
+					}
+					//possibly start a drag select on this letter if mouse is held down
+					letterDragSelect(liElem);
+				},150);
+			});
+			//mouse enter
+			lElems.mouseenter(function(e){
+				//possibly start a drag select on this letter if mouse is held down
+				letterDragSelect(jQuery(this));
+			});
+			//click
 			lElems.click(function(e){
 				//move the cursor to the clicked element
 				var txtParent=jQuery(this).parent();
-				//remove selection from all letters
-				txtParent.children('l.sel').removeClass('sel');
 				//get the cursor position and the right and left edges of the letter
 				var letterLeft=jQuery(this).offset().left;
 				var letterRight=letterLeft+jQuery(this).outerWidth();
