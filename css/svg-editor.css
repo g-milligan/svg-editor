@@ -10,7 +10,9 @@
 
 #code txt l.cursor:after,#code txt l{display:inline-block;font-weight:bold;font-size:100%;}
 #code txt l{font-weight:normal;position:relative;}
+#code txt l.sel{background-color:rgba(0,100,255,1);color:#fff;}
 #code txt l.cursor:after,#code txt l.cursor.before:before{background-color:#881280;color:#881280;position:absolute;height:100%;width:3px;right:-1px;top:0;margin:auto;display:inline-block;content:"";-webkit-animation:.6s blink step-end infinite;-moz-animation:.6s blink step-end infinite;-ms-animation:.6s blink step-end infinite;-o-animation:.6s blink step-end infinite;animation:.6s blink step-end infinite;}
+#code txt l.cursor.sel:after,#code txt l.cursor.sel.before:before{background-color:#FFFC00;color:#FFFC00;}
 #code txt l.cursor.before:before{right:initial;left:-1px;}
 #code txt l.cursor.before:after{display:none;}
 #code txt l.blank{width:.1em;height:.9em;vertical-align:top;}

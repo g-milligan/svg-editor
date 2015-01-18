@@ -287,6 +287,8 @@ function updateCode(){
 			lElems.click(function(e){
 				//move the cursor to the clicked element
 				var txtParent=jQuery(this).parent();
+				//remove selection from all letters
+				txtParent.children('l.sel').removeClass('sel');
 				//get the cursor position and the right and left edges of the letter
 				var letterLeft=jQuery(this).offset().left;
 				var letterRight=letterLeft+jQuery(this).outerWidth();
@@ -327,12 +329,21 @@ function updateCode(){
 		//detect special key press (ctl, alt, shift)
 		var isSpecialKeyHeld=function(e){
 			var isSpecial=true;
-			if(!e.shiftKey){
-				if(!e.ctrlKey){
-					if(!e.altKey){
-						isSpecial=false;
+			//if event is defined
+			if(e!=undefined){
+				if(e.shiftKey==undefined||!e.shiftKey){
+					if(e.ctrlKey==undefined||!e.ctrlKey){
+						if(e.altKey==undefined||!e.altKey){
+							//command key
+							if(e.metaKey==undefined||!e.metaKey){
+								isSpecial=false;
+							}
+						}
 					}
 				}
+			}else{
+				//event is not defined
+				isSpecial=false;
 			}
 			return isSpecial;
 		};
@@ -496,7 +507,17 @@ function updateCode(){
 						prevElem.addClass('cursor');
 						//need to select
 						if(isSpecialKeyHeld(e)){
-							//***
+							//if NOT already selected
+							if(!cursorElem.hasClass('sel')){
+								//add the selected class
+								cursorElem.addClass('sel');
+							}else{
+								//already selected... so deselect
+								cursorElem.removeClass('sel');
+							}
+						}else{
+							//no letter should be selected
+							txtElem.children('.sel').removeClass('sel');
 						}
 					}else{
 						//no previous element...
@@ -505,7 +526,17 @@ function updateCode(){
 						cursorElem.addClass('before');
 						//need to select
 						if(isSpecialKeyHeld(e)){
-							//***
+							//if NOT already selected
+							if(!cursorElem.hasClass('sel')){
+								//add the selected class
+								cursorElem.addClass('sel');
+							}else{
+								//already selected... so deselect
+								cursorElem.removeClass('sel');
+							}
+						}else{
+							//no letter should be selected
+							txtElem.children('.sel').removeClass('sel');
 						}
 					}
 				}
@@ -517,7 +548,17 @@ function updateCode(){
 					cursorElem.removeClass('before');
 					//need to select
 					if(isSpecialKeyHeld(e)){
-						//***
+						//if NOT already selected
+						if(!cursorElem.hasClass('sel')){
+							//add the selected class
+							cursorElem.addClass('sel');
+						}else{
+							//already selected... so deselect
+							cursorElem.removeClass('sel');
+						}
+					}else{
+						//no letter should be selected
+						txtElem.children('.sel').removeClass('sel');
 					}
 				}else{
 					//not at the left of the first letter...
@@ -530,7 +571,17 @@ function updateCode(){
 						nextElem.addClass('cursor');
 						//need to select
 						if(isSpecialKeyHeld(e)){
-							//***
+							//if NOT already selected
+							if(!nextElem.hasClass('sel')){
+								//add the selected class
+								nextElem.addClass('sel');
+							}else{
+								//already selected... so deselect
+								nextElem.removeClass('sel');
+							}
+						}else{
+							//no letter should be selected
+							txtElem.children('.sel').removeClass('sel');
 						}
 					}
 				}
@@ -551,6 +602,9 @@ function updateCode(){
 				case 13: //enter key
 					e.preventDefault();
 					//***
+					break;
+				case 91: //apple command key
+					e.preventDefault();
 					break;
 				case 16: //shift key
 					e.preventDefault();
@@ -591,40 +645,61 @@ function updateCode(){
 		});
 		//click event
 		btnElems.click(function(e){
-			//if NOT already has focus
 			var btn=jQuery(this);
-			if(!btn.hasClass('focus')){
-				//set the focus class of this element
-				btn.addClass('focus');
-				//set the focus of this hidden <input>
-				var focusInput=btn.children('input:last');
-				focusInput.focus();
-				//clear previous focus (but keep focus on btn)
-				clearFocus(btn);
-				//if there is existing text being modified
+			//if NOT already has double click class
+			var isDblClick=false;
+			if(!btn.hasClass('dbl-click')){
+				//add dble click class... then remove the class after a delay
+				btn.addClass('dbl-click');
+				setTimeout(function(){btn.removeClass('dbl-click')},200);
+			}else{
+				//already has dbl-click class...
+				isDblClick=true;
+				//if there is text in this btn
 				var txtElem=btn.children('txt:first');
 				if(txtElem.length>0){
-					//get the input text
-					var txt=txtElem.text(); txt=txt.trim();
-					//record this previous text, before EDITS are made
-					txtElem[0]['previousText']=txt;
-					//split up each character
-					var letterArray=txt.split('');txt='';
-					//for each character
-					for(var l=0;l<letterArray.length;l++){
-						//if last letter... then add cursor class
-						var json={};
-						if(l==letterArray.length-1){json['cursorClass']='cursor'}
-						//get the letter's markup
-						var letter=letterArray[l];
-						txt+=gLetterMarkup(letter,json);
+					//select all of the text and remove the cursor
+					txtElem.children('l').addClass('sel').removeClass('cursor');
+					//put the cursor at the start of the text
+					txtElem.children('l:first').addClass('before').addClass('cursor');
+				}
+			}
+			//if NOT double clicked
+			if(!isDblClick){
+				//if NOT already has focus
+				if(!btn.hasClass('focus')){
+					//set the focus class of this element
+					btn.addClass('focus');
+					//set the focus of this hidden <input>
+					var focusInput=btn.children('input:last');
+					focusInput.focus();
+					//clear previous focus (but keep focus on btn)
+					clearFocus(btn);
+					//if there is existing text being modified
+					var txtElem=btn.children('txt:first');
+					if(txtElem.length>0){
+						//get the input text
+						var txt=txtElem.text(); txt=txt.trim();
+						//record this previous text, before EDITS are made
+						txtElem[0]['previousText']=txt;
+						//split up each character
+						var letterArray=txt.split('');txt='';
+						//for each character
+						for(var l=0;l<letterArray.length;l++){
+							//if last letter... then add cursor class
+							var json={};
+							if(l==letterArray.length-1){json['cursorClass']='cursor'}
+							//get the letter's markup
+							var letter=letterArray[l];
+							txt+=gLetterMarkup(letter,json);
+						}
+						txtElem.html(txt); //set the letters surronded by <l>
+						//add the dynamic events to the new <l>etter elements
+						evsLetters(txtElem);
+					}else{
+						//new text is being added (NOT modifying existing text)...
+						//***
 					}
-					txtElem.html(txt); //set the letters surronded by <l>
-					//add the dynamic events to the new <l>etter elements
-					evsLetters(txtElem);
-				}else{
-					//new text is being added (NOT modifying existing text)...
-					//***
 				}
 			}
 		});
