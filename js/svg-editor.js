@@ -324,6 +324,27 @@ function updateCode(){
 		//function to set txt element as empty
 		var setBlankTxt=function(txtElem){
 			txtElem.html('<l class="cursor before blank"></l>');
+			//figure out which element to add the "blank-txt" class to
+			var btn=txtElem.parent();
+			var btnTag=btn[0].tagName.toLowerCase();
+			var wrapElem;
+			switch(btnTag){
+				case 'k': //btn is a key in a key/value pair
+					wrapElem=btn.parent(); //wrapElem is <kv>
+					break;
+				case 'v': //btn is a value in a key/value pair
+					wrapElem=btn.parent(); //wrapElem is <kv>
+					break;
+				case 'n': //btn is a tag <n>ame of an XML node
+					wrapElem=btn.parents('g:first'); //wrapElem is a <g>roup node
+					break;
+				default: //just use btn as the element that will have the "blank-txt" class
+					wrapElem=btn;
+					break;
+			}
+			//add the blank-txt class
+			wrapElem.addClass('blank-txt');
+			//attach events to the new <l class="cursor before blank"> letter
 			evsLetters(txtElem);
 		};
 		//detect special key press (ctl, alt, shift)
@@ -416,8 +437,14 @@ function updateCode(){
 								//add the new letters after previous cursor
 								cursorElem.after(val);
 							}
-							//remove blank letters
-							txtElem.children('l.blank').remove();
+							//if before, this txt was blank
+							var blankElems=txtElem.children('l.blank');
+							if(blankElems.length>0){
+								//remove blank letters
+								blankElems.remove();
+								//remove blank-txt class
+								txtElem.parents('.blank-txt:first').removeClass('blank-txt');
+							}
 							//add the dynamic events to the new <l>etter elements
 							evsLetters(txtElem);
 						}
@@ -431,67 +458,112 @@ function updateCode(){
 			var txtElem=btn.children('txt:first');
 			var cursorElem=txtElem.children('.cursor:first');
 			//==INTERNAL FUNCTIONS==
-			var backSpaceLetter=function(){
-				//if NOT blank txt
-				if(!cursorElem.hasClass('blank')){
-					//if the cursor isn't already at the start
-					if(!cursorElem.hasClass('before')){
-						//get the previous element
-						var prevLElem=cursorElem.prev('l:first');
-						//if there is a previous <l>etter
-						if(prevLElem.length>0){
-							//move the cursor to this element
-							cursorElem.removeClass('cursor');
-							prevLElem.addClass('cursor');
+			var deleteSelectedLetters=function(){
+				var didDelSel=false;
+				//if there are any selected letters
+				var selLElems=txtElem.children('l.sel');
+				if(selLElems.length>0){
+					//if the first selected letter is also the first letter
+					var firstSel=selLElems.eq(0);
+					if(firstSel.index()==0){
+						//if there is a letter AFTER the LAST selected letter
+						var lastSel=selLElems.filter(':last');
+						var afterSel=lastSel.next('l:first');
+						if(afterSel.length>0){
+							//delete selected letters
+							selLElems.remove();
+							//add the cursor to the remaining, and now first, letter
+							afterSel.addClass('before');
+							afterSel.addClass('cursor');
+							didDelSel=true;
 						}else{
-							//no previous letter...
+							//all letters are selected... so delete them all...
 
-							//if there is a letter after the cursor
-							var nextLElem=cursorElem.next('l:first');
-							if(nextLElem.length>0){
+							//blank text, but the cursor still blinks
+							setBlankTxt(txtElem);
+							didDelSel=true;
+						}
+					}else{
+						//first selected letter is NOT also the first letter...
+
+						//get the non selected letter BEFORE the first selected letter
+						var beforeSel=firstSel.prev('l:first');
+						//remove the selected letters
+						selLElems.remove();
+						//add the cursor
+						beforeSel.addClass('cursor');
+						didDelSel=true;
+					}
+				}
+				return didDelSel;
+			};
+			var backSpaceLetter=function(){
+				//if there are NO selected letters to delete
+				if(!deleteSelectedLetters()){
+					//if NOT blank txt
+					if(!cursorElem.hasClass('blank')){
+						//if the cursor isn't already at the start
+						if(!cursorElem.hasClass('before')){
+							//get the previous element
+							var prevLElem=cursorElem.prev('l:first');
+							//if there is a previous <l>etter
+							if(prevLElem.length>0){
 								//move the cursor to this element
 								cursorElem.removeClass('cursor');
-								nextLElem.addClass('before');
-								nextLElem.addClass('cursor');
+								prevLElem.addClass('cursor');
 							}else{
-								//there are no more letters to switch the cursor to...
+								//no previous letter...
 
-								//blank text, but the cursor still blinks
-								setBlankTxt(txtElem);
+								//if there is a letter after the cursor
+								var nextLElem=cursorElem.next('l:first');
+								if(nextLElem.length>0){
+									//move the cursor to this element
+									cursorElem.removeClass('cursor');
+									nextLElem.addClass('before');
+									nextLElem.addClass('cursor');
+								}else{
+									//there are no more letters to switch the cursor to...
+
+									//blank text, but the cursor still blinks
+									setBlankTxt(txtElem);
+								}
 							}
+							//remove this letter (backspace)
+							cursorElem.remove();
 						}
-						//remove this letter (backspace)
-						cursorElem.remove();
 					}
 				}
 			};
 			var deleteLetter=function(){
-				//if NOT blank txt
-				if(!cursorElem.hasClass('blank')){
-					//if at first letter
-					if(cursorElem.hasClass('before')){
-						//if there is a next letter
-						var nextElem=cursorElem.next('l:first');
-						if(nextElem.length>0){
-							nextElem.addClass('before');
-							nextElem.addClass('cursor');
-							cursorElem.removeClass('cursor');
-							//remove this letter (delete)
-							cursorElem.remove();
+				//if there are NO selected letters to delete
+				if(!deleteSelectedLetters()){
+					//if NOT blank txt
+					if(!cursorElem.hasClass('blank')){
+						//if at first letter
+						if(cursorElem.hasClass('before')){
+							//if there is a next letter
+							var nextElem=cursorElem.next('l:first');
+							if(nextElem.length>0){
+								nextElem.addClass('before');
+								nextElem.addClass('cursor');
+								cursorElem.removeClass('cursor');
+								//remove this letter (delete)
+								cursorElem.remove();
+							}else{
+								//no next letter...
+
+								//blank text, but the cursor still blinks
+								setBlankTxt(txtElem);
+							}
 						}else{
-							//no next letter...
+							//not at first letter...
 
-							//blank text, but the cursor still blinks
-							setBlankTxt(txtElem);
-						}
-					}else{
-						//not at first letter...
-
-						//if not at last letter
-						var delElem=cursorElem.next('l:first');
-						if(delElem.length>0){
-							//remove this letter (delete)
-							delElem.remove();
+							//if not at last letter
+							var delElem=cursorElem.next('l:first');
+							if(delElem.length>0){
+								//remove this letter (delete)
+								delElem.remove();
+							}
 						}
 					}
 				}
