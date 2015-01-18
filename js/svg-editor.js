@@ -476,11 +476,61 @@ function updateCode(){
 					}else{
 						//not at first letter...
 
-						//not at last letter
+						//if not at last letter
 						var delElem=cursorElem.next('l:first');
 						if(delElem.length>0){
 							//remove this letter (delete)
 							delElem.remove();
+						}
+					}
+				}
+			};
+			var cursorLeft=function(){
+				//if NOT already at the left of the first letter
+				if(!cursorElem.hasClass('before')){
+					//if there is a previous element
+					var prevElem=cursorElem.prev('l:first');
+					if(prevElem.length>0){
+						//transfer cursor to the previous left
+						cursorElem.removeClass('cursor');
+						prevElem.addClass('cursor');
+						//need to select
+						if(isSpecialKeyHeld(e)){
+							//***
+						}
+					}else{
+						//no previous element...
+
+						//move the cursor to the left of this element
+						cursorElem.addClass('before');
+						//need to select
+						if(isSpecialKeyHeld(e)){
+							//***
+						}
+					}
+				}
+			};
+			var cursorRight=function(){
+				//if at the left of the first letter
+				if(cursorElem.hasClass('before')){
+					//move the cursor to the right side of this element
+					cursorElem.removeClass('before');
+					//need to select
+					if(isSpecialKeyHeld(e)){
+						//***
+					}
+				}else{
+					//not at the left of the first letter...
+
+					//if there is a next element
+					var nextElem=cursorElem.next('l:first');
+					if(nextElem.length>0){
+						//transfer cursor to the next right
+						cursorElem.removeClass('cursor');
+						nextElem.addClass('cursor');
+						//need to select
+						if(isSpecialKeyHeld(e)){
+							//***
 						}
 					}
 				}
@@ -507,29 +557,27 @@ function updateCode(){
 					break;
 				case 27: //escape key
 					e.preventDefault();
+					//***
 					break;
 				case 9: //tab key
 					e.preventDefault();
+					//***
 					break;
 				case 37: //left arrow
 					e.preventDefault();
-					//if shift key is being pressed
-					if(e.shiftKey){
-						//***
-					}else{
-						//shift NOT being pressed...
-
-
-					}
+					cursorLeft();
 					break;
 				case 38: //up arrow
 					e.preventDefault();
+					//***
 					break;
 				case 39: //right arrow
 					e.preventDefault();
+					cursorRight();
 					break;
 				case 40: //down arrow
 					e.preventDefault();
+					//***
 					break;
 				default:
 					break;
