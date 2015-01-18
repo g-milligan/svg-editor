@@ -70,7 +70,7 @@ function designToSrc(design){
 			//replace tag with temporary placeholder, surronded by <e> element markup
 			design=design.replace(matchedTagStr,startGroup+'<e n="'+info.name.toLowerCase()+'" class="'+info.open_close+'"><<'+t+'>></e>'+endGroup);
 			//insert the <n> markup around the tag name
-			matchedTagStr=matchedTagStr.replace(info.name,'<n>'+info.name+'</n>');
+			matchedTagStr=matchedTagStr.replace(info.name,'<n><txt>'+info.name+'</txt></n>');
 			//if this is an open tag
 			if(info.open_close=='open'){
 				//select all of the key='val' OR key="val" attributes in this open tag
@@ -91,8 +91,8 @@ function designToSrc(design){
 						//replace the attribute with a temporary placeholder
 						matchedTagStr=matchedTagStr.replace(matchedAttr,beforeFirstAttr+'<kv>>>'+a+'<<</kv><x'+lastXClass+'><input type="text" /></x>');
 						//surround the attribute key with markup
-						matchedAttr='<k><space> </space>'+matchedAttr.trim();
-						matchedAttr=matchedAttr.replace('=','</k>=');
+						matchedAttr='<k><space> </space><txt>'+matchedAttr.trim();
+						matchedAttr=matchedAttr.replace('=','</txt></k>=');
 						//surround the val with markup
 						var valStr=matchedAttr.substring(matchedAttr.indexOf('=')+'='.length);
 						//if the value starts with ' or ", then strip it off
@@ -104,7 +104,10 @@ function designToSrc(design){
 						valStr=valStr.trim();
 						var strBeforeVal=matchedAttr.substring(0,matchedAttr.lastIndexOf(valStr));
 						var strAfterVal=matchedAttr.substring(strBeforeVal.length+valStr.length);
-						matchedAttr=strBeforeVal+'<v>'+valStr+'</v>'+strAfterVal;
+						matchedAttr=strBeforeVal+'<v><txt>'+valStr+'</txt></v>'+strAfterVal;
+						//add input elements that consume the focus
+						matchedAttr=matchedAttr.replace('</k>','<input type="text" /></k>');
+						matchedAttr=matchedAttr.replace('</v>','<input type="text" /></v>');
 						//add the modified attribute string to the array
 						newMatchedAttrs.push(matchedAttr);
 					}
@@ -116,10 +119,11 @@ function designToSrc(design){
 				}else{
 					//no attributes in this open tag...
 					//insert the <x> element after the tag name
-					matchedTagStr=matchedTagStr.replace('</n>','|____n____|<x class="first last"><input type="text" /></x>');
-					matchedTagStr=matchedTagStr.replace('|____n____|','</n>');
+					matchedTagStr=matchedTagStr.replace('</n>','</n><x class="first last"><input type="text" /></x>');
 				}
 			}
+			//insert the focus input into the tag <n>ame element
+			matchedTagStr=matchedTagStr.replace('</n>','<input type="text" /></n>')
 			//push the possibly modified tag html into a new array
 			newMatchedHtmlTags.push(matchedTagStr);
 		}
@@ -207,6 +211,147 @@ function updateCode(){
 				}
 			});
 		});
-		//*** more events
+		//==EDIT XML EVENTS==
+		var clickEditElems=codeElem.find('input').not('.evs');
+		clickEditElems.addClass('evs');
+		var btnElems=clickEditElems.parent();
+		//function to clear the current focus
+		var clearFocus=function(keepFocusBtn){
+			var anyChanges=false;
+			//if there are any buttons with focus
+			var clearBtns=codeElem.find('.focus');
+			if(clearBtns.length>0){
+				//if ignore a button that has focus...
+				if(keepFocusBtn!=undefined&&keepFocusBtn.length>0){clearBtns=clearBtns.not(keepFocusBtn);}
+				//if there are still buttons to clear focus from
+				if(clearBtns.length>0){
+					//for each button to clear
+					clearBtns.each(function(){
+						//if this button has the focus class still
+						var btn=jQuery(this);
+						if(btn.hasClass('focus')){
+							//remove the focus class
+							btn.removeClass('focus');
+							//get <txt>
+							var txtElem=btn.children('txt:first');
+							//get new text
+							var newTxt=txtElem.text(); newTxt=newTxt.trim();
+							newTxt=replaceAll(newTxt,'&nbsp;',' ');
+							//if the new text is different from the old text
+							if(newTxt!=txtElem[0].previousText){
+								//make sure the new text is set
+								txtElem[0].previousText=newTxt;
+								//refresh the design view flag
+								anyChanges=true;
+							}
+							//clear <l> elements
+							txtElem.html(newTxt);
+						}
+					});
+				}
+			}
+			//if any edit changes were made
+			if(anyChanges){
+				//refresh the design view
+				//***
+			}
+		};
+		//blur event
+		clickEditElems.blur(function(){
+			//if NOT hovering over the input that lost focus
+			if(!jQuery(this).parent().hasClass('over')){
+				//remove focus from previous elements, but keep the focus on any new focused element, if any
+				var keepFocusBtns=codeElem.find('.focus > input').not(jQuery(this));
+				clearFocus(keepFocusBtns);
+			}else{
+				//return focus
+				jQuery(this).focus();
+			}
+		});
+		//key event ***
+		//hover event
+		btnElems.hover(function(){
+			jQuery(this).addClass('over');
+		},function(){
+			jQuery(this).removeClass('over');
+		});
+		//click event
+		btnElems.click(function(e){
+			//if NOT already has focus
+			var btn=jQuery(this);
+			if(!btn.hasClass('focus')){
+				//set the focus class of this element
+				btn.addClass('focus');
+				//set the focus of this hidden <input>
+				var focusInput=btn.children('input:last');
+				focusInput.focus();
+				//clear previous focus (but keep focus on btn)
+				clearFocus(btn);
+				//if there is existing text being modified
+				var txtElem=btn.children('txt:first');
+				if(txtElem.length>0){
+					//get the input text
+					var txt=txtElem.text(); txt=txt.trim();
+					//record this previous text, before EDITS are made
+					txtElem[0]['previousText']=txt;
+					//split up each character
+					var letterArray=txt.split('');txt='';
+					//for each character
+					for(var l=0;l<letterArray.length;l++){
+						//if last letter... then add cursor class
+						var cursorClass='';
+						if(l==letterArray.length-1){cursorClass=' class="cursor"';}
+						//checkout the letter value
+						var letter=letterArray[l];
+						if(letter==' '){
+							letter='&nbsp;';
+						}
+						//surround this letter with an element
+						txt+='<l'+cursorClass+'>'+letter+'</l>';
+					}
+					txtElem.html(txt); //set the letters surronded by <l>
+					//click events for <l> each letter
+					var lElems=txtElem.children('l').not('evs');
+					lElems.addClass('evs');
+					lElems.click(function(e){
+						//move the cursor to the clicked element
+						var txtParent=jQuery(this).parent();
+						//get the cursor position and the right and left edges of the letter
+						var letterLeft=jQuery(this).offset().left;
+						var letterRight=letterLeft+jQuery(this).outerWidth();
+						var mouseLeft=e.clientX;
+						//get the difference between cursor position and LEFT edge of the letter
+						var leftDifference=-1;
+						if(mouseLeft>letterLeft){leftDifference=mouseLeft-letterLeft;}
+						else{leftDifference=letterLeft-mouseLeft;}
+						//get the difference between cursor position and RIGHT edge of the letter
+						var rightDifference=-1;
+						if(mouseLeft>letterRight){rightDifference=mouseLeft-letterRight;}
+						else{rightDifference=letterRight-mouseLeft;}
+						//remove the previous cursor position
+						txtParent.children('.cursor').removeClass('cursor');
+						txtParent.children('.before').removeClass('before');
+						//which edge is the cursor closer to?
+						var cursorLElem=jQuery(this);
+						//if closer to the left edge
+						if(leftDifference<rightDifference){
+							//if there is an element BEFORE this element
+							var prevLElem=jQuery(this).prev('l:first');
+							if(prevLElem.length>0){
+								cursorLElem=prevLElem;
+							}else{
+								//this is already the first letter element
+								cursorLElem.addClass('before');
+							}
+						}
+						//add the new cursor position
+						cursorLElem.addClass('cursor');
+					});
+				}else{
+					//new text is being added...
+					//***
+				}
+			}
+		});
 	}
 }
