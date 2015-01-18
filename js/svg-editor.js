@@ -324,6 +324,18 @@ function updateCode(){
 			txtElem.html('<l class="cursor before blank"></l>');
 			evsLetters(txtElem);
 		};
+		//detect special key press (ctl, alt, shift)
+		var isSpecialKeyHeld=function(e){
+			var isSpecial=true;
+			if(!e.shiftKey){
+				if(!e.ctrlKey){
+					if(!e.altKey){
+						isSpecial=false;
+					}
+				}
+			}
+			return isSpecial;
+		};
 		//blur event
 		clickEditElems.blur(function(){
 			//if NOT hovering over the input that lost focus
@@ -393,6 +405,8 @@ function updateCode(){
 								//add the new letters after previous cursor
 								cursorElem.after(val);
 							}
+							//remove blank letters
+							txtElem.children('l.blank').remove();
 							//add the dynamic events to the new <l>etter elements
 							evsLetters(txtElem);
 						}
@@ -405,77 +419,88 @@ function updateCode(){
 			var btn=jQuery(this).parent();
 			var txtElem=btn.children('txt:first');
 			var cursorElem=txtElem.children('.cursor:first');
-			//depending on the key downed
-			switch(e.keyCode){
-				case 8: //back-space
-					e.preventDefault();
-					//if NOT blank txt
-					if(!cursorElem.hasClass('blank')){
-						//if the cursor isn't already at the start
-						if(!cursorElem.hasClass('before')){
-							//get the previous element
-							var prevLElem=cursorElem.prev('l:first');
-							//if there is a previous <l>etter
-							if(prevLElem.length>0){
+			//==INTERNAL FUNCTIONS==
+			var backSpaceLetter=function(){
+				//if NOT blank txt
+				if(!cursorElem.hasClass('blank')){
+					//if the cursor isn't already at the start
+					if(!cursorElem.hasClass('before')){
+						//get the previous element
+						var prevLElem=cursorElem.prev('l:first');
+						//if there is a previous <l>etter
+						if(prevLElem.length>0){
+							//move the cursor to this element
+							cursorElem.removeClass('cursor');
+							prevLElem.addClass('cursor');
+						}else{
+							//no previous letter...
+
+							//if there is a letter after the cursor
+							var nextLElem=cursorElem.next('l:first');
+							if(nextLElem.length>0){
 								//move the cursor to this element
 								cursorElem.removeClass('cursor');
-								prevLElem.addClass('cursor');
+								nextLElem.addClass('before');
+								nextLElem.addClass('cursor');
 							}else{
-								//no previous letter...
-
-								//if there is a letter after the cursor
-								var nextLElem=cursorElem.next('l:first');
-								if(nextLElem.length>0){
-									//move the cursor to this element
-									cursorElem.removeClass('cursor');
-									nextLElem.addClass('before');
-									nextLElem.addClass('cursor');
-								}else{
-									//there are no more letters to switch the cursor to...
-
-									//blank text, but the cursor still blinks
-									setBlankTxt(txtElem);
-								}
-							}
-							//remove this letter (backspace)
-							cursorElem.remove();
-						}
-					}
-					break;
-				case 46: //delete key
-					e.preventDefault();
-					//if NOT blank txt
-					if(!cursorElem.hasClass('blank')){
-						//if at first letter
-						if(cursorElem.hasClass('before')){
-							//if there is a next letter
-							var nextElem=cursorElem.next('l:first');
-							if(nextElem.length>0){
-								nextElem.addClass('before');
-								nextElem.addClass('cursor');
-								cursorElem.removeClass('cursor');
-								//remove this letter (delete)
-								cursorElem.remove();
-							}else{
-								//no next letter...
+								//there are no more letters to switch the cursor to...
 
 								//blank text, but the cursor still blinks
 								setBlankTxt(txtElem);
 							}
+						}
+						//remove this letter (backspace)
+						cursorElem.remove();
+					}
+				}
+			};
+			var deleteLetter=function(){
+				//if NOT blank txt
+				if(!cursorElem.hasClass('blank')){
+					//if at first letter
+					if(cursorElem.hasClass('before')){
+						//if there is a next letter
+						var nextElem=cursorElem.next('l:first');
+						if(nextElem.length>0){
+							nextElem.addClass('before');
+							nextElem.addClass('cursor');
+							cursorElem.removeClass('cursor');
+							//remove this letter (delete)
+							cursorElem.remove();
 						}else{
-							//not at first letter...
+							//no next letter...
 
-							//not at last letter
-							var delElem=cursorElem.next('l:first');
-							if(delElem.length>0){
-								//remove this letter (delete)
-								delElem.remove();
-							}
+							//blank text, but the cursor still blinks
+							setBlankTxt(txtElem);
+						}
+					}else{
+						//not at first letter...
+
+						//not at last letter
+						var delElem=cursorElem.next('l:first');
+						if(delElem.length>0){
+							//remove this letter (delete)
+							delElem.remove();
 						}
 					}
+				}
+			};
+			//==DO SOMETHING DEPENDING ON THE KEY CODE(S)==
+			//depending on the key downed
+			switch(e.keyCode){
+				case 8: //back-space
+					e.preventDefault();
+					if(isSpecialKeyHeld(e)){deleteLetter();}
+					else{backSpaceLetter();}
+					break;
+				case 46: //delete key
+					e.preventDefault();
+					if(isSpecialKeyHeld(e)){backSpaceLetter();}
+					else{deleteLetter();}
 					break;
 				case 13: //enter key
 					e.preventDefault();
+					//***
 					break;
 				case 16: //shift key
 					e.preventDefault();
@@ -488,6 +513,14 @@ function updateCode(){
 					break;
 				case 37: //left arrow
 					e.preventDefault();
+					//if shift key is being pressed
+					if(e.shiftKey){
+						//***
+					}else{
+						//shift NOT being pressed...
+
+
+					}
 					break;
 				case 38: //up arrow
 					e.preventDefault();
@@ -542,7 +575,7 @@ function updateCode(){
 					//add the dynamic events to the new <l>etter elements
 					evsLetters(txtElem);
 				}else{
-					//new text is being added...
+					//new text is being added (NOT modifying existing text)...
 					//***
 				}
 			}
