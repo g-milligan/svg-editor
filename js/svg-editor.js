@@ -319,6 +319,11 @@ function updateCode(){
 				cursorLElem.addClass('cursor');
 			});
 		};
+		//function to set txt element as empty
+		var setBlankTxt=function(txtElem){
+			txtElem.html('<l class="cursor before blank"></l>');
+			evsLetters(txtElem);
+		};
 		//blur event
 		clickEditElems.blur(function(){
 			//if NOT hovering over the input that lost focus
@@ -404,33 +409,69 @@ function updateCode(){
 			switch(e.keyCode){
 				case 8: //back-space
 					e.preventDefault();
-					//if the cursor isn't already at the start
-					if(!cursorElem.hasClass('before')){
-						//get the previous element
-						var prevLElem=cursorElem.prev('l:first');
-						//if there is a previous <l>etter
-						if(prevLElem.length>0){
-							//move the cursor to this element
-							cursorElem.removeClass('cursor');
-							prevLElem.addClass('cursor');
-						}else{
-							//no previous letter...
-
-							//if there is a letter after the cursor
-							var nextLElem=cursorElem.next('l:first');
-							if(nextLElem.length>0){
+					//if NOT blank txt
+					if(!cursorElem.hasClass('blank')){
+						//if the cursor isn't already at the start
+						if(!cursorElem.hasClass('before')){
+							//get the previous element
+							var prevLElem=cursorElem.prev('l:first');
+							//if there is a previous <l>etter
+							if(prevLElem.length>0){
 								//move the cursor to this element
 								cursorElem.removeClass('cursor');
-								nextLElem.addClass('before');
-								nextLElem.addClass('cursor');
+								prevLElem.addClass('cursor');
 							}else{
-								//there are no more letters to switch the cursor to...
+								//no previous letter...
 
-								//*** blank text, but the cursor still blinks
+								//if there is a letter after the cursor
+								var nextLElem=cursorElem.next('l:first');
+								if(nextLElem.length>0){
+									//move the cursor to this element
+									cursorElem.removeClass('cursor');
+									nextLElem.addClass('before');
+									nextLElem.addClass('cursor');
+								}else{
+									//there are no more letters to switch the cursor to...
+
+									//blank text, but the cursor still blinks
+									setBlankTxt(txtElem);
+								}
+							}
+							//remove this letter (backspace)
+							cursorElem.remove();
+						}
+					}
+					break;
+				case 46: //delete key
+					e.preventDefault();
+					//if NOT blank txt
+					if(!cursorElem.hasClass('blank')){
+						//if at first letter
+						if(cursorElem.hasClass('before')){
+							//if there is a next letter
+							var nextElem=cursorElem.next('l:first');
+							if(nextElem.length>0){
+								nextElem.addClass('before');
+								nextElem.addClass('cursor');
+								cursorElem.removeClass('cursor');
+								//remove this letter (delete)
+								cursorElem.remove();
+							}else{
+								//no next letter...
+
+								//blank text, but the cursor still blinks
+								setBlankTxt(txtElem);
+							}
+						}else{
+							//not at first letter...
+
+							//not at last letter
+							var delElem=cursorElem.next('l:first');
+							if(delElem.length>0){
+								//remove this letter (delete)
+								delElem.remove();
 							}
 						}
-						//remove this letter (backspace)
-						cursorElem.remove();
 					}
 					break;
 				case 13: //enter key
