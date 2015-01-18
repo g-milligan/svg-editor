@@ -256,6 +256,69 @@ function updateCode(){
 				//***
 			}
 		};
+		//function to create the markup for one letter
+		var gLetterMarkup=function(letterStr,json){
+			if(letterStr==' '){
+				letterStr='&nbsp;';
+			}
+			//surround this letter with an element
+			var classStr='';
+			if(json!=undefined){
+				//cursor class
+				if(json.hasOwnProperty('cursorClass')){
+					//if first class, start list, otherwise, add separator
+					if(classStr.length<1){classStr=' class="';}
+					else{classStr+=' ';}
+					//add cursor class
+					classStr+=json.cursorClass;
+				}
+				//if any classes added, end them
+				if(classStr.length>0){classStr+="\"";}
+			}
+			//set the markup
+			var markup='<l'+classStr+'>'+letterStr+'</l>';
+			return markup;
+		};
+		//function to add events to new <l>etter elements
+		var evsLetters=function(txtElem){
+			//click events for <l> each letter
+			var lElems=txtElem.children('l').not('evs');
+			lElems.addClass('evs');
+			lElems.click(function(e){
+				//move the cursor to the clicked element
+				var txtParent=jQuery(this).parent();
+				//get the cursor position and the right and left edges of the letter
+				var letterLeft=jQuery(this).offset().left;
+				var letterRight=letterLeft+jQuery(this).outerWidth();
+				var mouseLeft=e.clientX;
+				//get the difference between cursor position and LEFT edge of the letter
+				var leftDifference=-1;
+				if(mouseLeft>letterLeft){leftDifference=mouseLeft-letterLeft;}
+				else{leftDifference=letterLeft-mouseLeft;}
+				//get the difference between cursor position and RIGHT edge of the letter
+				var rightDifference=-1;
+				if(mouseLeft>letterRight){rightDifference=mouseLeft-letterRight;}
+				else{rightDifference=letterRight-mouseLeft;}
+				//remove the previous cursor position
+				txtParent.children('.cursor').removeClass('cursor');
+				txtParent.children('.before').removeClass('before');
+				//which edge is the cursor closer to?
+				var cursorLElem=jQuery(this);
+				//if closer to the left edge
+				if(leftDifference<rightDifference){
+					//if there is an element BEFORE this element
+					var prevLElem=jQuery(this).prev('l:first');
+					if(prevLElem.length>0){
+						cursorLElem=prevLElem;
+					}else{
+						//this is already the first letter element
+						cursorLElem.addClass('before');
+					}
+				}
+				//add the new cursor position
+				cursorLElem.addClass('cursor');
+			});
+		};
 		//blur event
 		clickEditElems.blur(function(){
 			//if NOT hovering over the input that lost focus
@@ -268,7 +331,103 @@ function updateCode(){
 				jQuery(this).focus();
 			}
 		});
-		//key event ***
+		//key events
+		var keyup_timeout;
+		clickEditElems.keyup(function(e){
+			//get the typed value
+			var typedVal=jQuery(this).val();
+			//init the property that saves the typed value, if necessary
+			if(!jQuery(this)[0].hasOwnProperty('typedVal')){
+				jQuery(this)[0]['typedVal']='';
+			}
+			//accumulate the typed value
+			jQuery(this)[0].typedVal+=typedVal;
+			//clear the input value
+			jQuery(this).val('');
+			//get the input element
+			var inputElem=jQuery(this);
+			//cancel previous keyup
+			clearTimeout(keyup_timeout);
+			keyup_timeout=setTimeout(function(){
+				//if the typed value property is initialized
+				if(inputElem[0].hasOwnProperty('typedVal')){
+					//get the value from the hidden input field and clear input field
+					var val=inputElem[0].typedVal;
+					//if the input field is not blank
+					if(val.length>0){
+						//reset the typed value
+						inputElem[0].typedVal='';
+						//split up each character
+						var letterArray=val.split('');val='';
+						//for each character
+						for(var l=0;l<letterArray.length;l++){
+							//if last letter... then add cursor class
+							var json={};
+							if(l==letterArray.length-1){json['cursorClass']='cursor'}
+							//get the letter markup
+							var letter=letterArray[l];
+							val+=gLetterMarkup(letter,json);
+						}
+						//get the letter <l> that has the cursor
+						var btn=inputElem.parent();
+						var txtElem=btn.children('txt:first');
+						var cursorElem=txtElem.children('l.cursor:first');
+						//if there is a letter with a cursor
+						if(cursorElem.length>0){
+							//remove previous cursor position
+							cursorElem.removeClass('cursor');
+							//if the cursor is before the letter
+							if(cursorElem.hasClass('before')){
+								//remove previous cursor position
+								cursorElem.removeClass('before');
+								//add new letters before the previous cursor
+								cursorElem.before(val);
+							}else{
+								//cursor is after the letter...
+
+								//add the new letters after previous cursor
+								cursorElem.after(val);
+							}
+							//add the dynamic events to the new <l>etter elements
+							evsLetters(txtElem);
+						}
+					}
+				}
+			}, 10);
+		});
+		clickEditElems.keydown(function(e){
+			switch(e.keyCode){
+				case 8: //back-space
+					e.preventDefault();
+					break;
+				case 13: //enter key
+					e.preventDefault();
+					break;
+				case 16: //shift key
+					e.preventDefault();
+					break;
+				case 27: //escape key
+					e.preventDefault();
+					break;
+				case 9: //tab key
+					e.preventDefault();
+					break;
+				case 37: //left arrow
+					e.preventDefault();
+					break;
+				case 38: //up arrow
+					e.preventDefault();
+					break;
+				case 39: //right arrow
+					e.preventDefault();
+					break;
+				case 40: //down arrow
+					e.preventDefault();
+					break;
+				default:
+					break;
+			}
+		});
 		//hover event
 		btnElems.hover(function(){
 			jQuery(this).addClass('over');
@@ -299,54 +458,15 @@ function updateCode(){
 					//for each character
 					for(var l=0;l<letterArray.length;l++){
 						//if last letter... then add cursor class
-						var cursorClass='';
-						if(l==letterArray.length-1){cursorClass=' class="cursor"';}
-						//checkout the letter value
+						var json={};
+						if(l==letterArray.length-1){json['cursorClass']='cursor'}
+						//get the letter's markup
 						var letter=letterArray[l];
-						if(letter==' '){
-							letter='&nbsp;';
-						}
-						//surround this letter with an element
-						txt+='<l'+cursorClass+'>'+letter+'</l>';
+						txt+=gLetterMarkup(letter,json);
 					}
 					txtElem.html(txt); //set the letters surronded by <l>
-					//click events for <l> each letter
-					var lElems=txtElem.children('l').not('evs');
-					lElems.addClass('evs');
-					lElems.click(function(e){
-						//move the cursor to the clicked element
-						var txtParent=jQuery(this).parent();
-						//get the cursor position and the right and left edges of the letter
-						var letterLeft=jQuery(this).offset().left;
-						var letterRight=letterLeft+jQuery(this).outerWidth();
-						var mouseLeft=e.clientX;
-						//get the difference between cursor position and LEFT edge of the letter
-						var leftDifference=-1;
-						if(mouseLeft>letterLeft){leftDifference=mouseLeft-letterLeft;}
-						else{leftDifference=letterLeft-mouseLeft;}
-						//get the difference between cursor position and RIGHT edge of the letter
-						var rightDifference=-1;
-						if(mouseLeft>letterRight){rightDifference=mouseLeft-letterRight;}
-						else{rightDifference=letterRight-mouseLeft;}
-						//remove the previous cursor position
-						txtParent.children('.cursor').removeClass('cursor');
-						txtParent.children('.before').removeClass('before');
-						//which edge is the cursor closer to?
-						var cursorLElem=jQuery(this);
-						//if closer to the left edge
-						if(leftDifference<rightDifference){
-							//if there is an element BEFORE this element
-							var prevLElem=jQuery(this).prev('l:first');
-							if(prevLElem.length>0){
-								cursorLElem=prevLElem;
-							}else{
-								//this is already the first letter element
-								cursorLElem.addClass('before');
-							}
-						}
-						//add the new cursor position
-						cursorLElem.addClass('cursor');
-					});
+					//add the dynamic events to the new <l>etter elements
+					evsLetters(txtElem);
 				}else{
 					//new text is being added...
 					//***
