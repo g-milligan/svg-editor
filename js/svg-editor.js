@@ -396,9 +396,42 @@ function updateCode(){
 			}, 10);
 		});
 		clickEditElems.keydown(function(e){
+			//get btn and <txt> elements
+			var btn=jQuery(this).parent();
+			var txtElem=btn.children('txt:first');
+			var cursorElem=txtElem.children('.cursor:first');
+			//depending on the key downed
 			switch(e.keyCode){
 				case 8: //back-space
 					e.preventDefault();
+					//if the cursor isn't already at the start
+					if(!cursorElem.hasClass('before')){
+						//get the previous element
+						var prevLElem=cursorElem.prev('l:first');
+						//if there is a previous <l>etter
+						if(prevLElem.length>0){
+							//move the cursor to this element
+							cursorElem.removeClass('cursor');
+							prevLElem.addClass('cursor');
+						}else{
+							//no previous letter...
+
+							//if there is a letter after the cursor
+							var nextLElem=cursorElem.next('l:first');
+							if(nextLElem.length>0){
+								//move the cursor to this element
+								cursorElem.removeClass('cursor');
+								nextLElem.addClass('before');
+								nextLElem.addClass('cursor');
+							}else{
+								//there are no more letters to switch the cursor to...
+
+								//*** blank text, but the cursor still blinks
+							}
+						}
+						//remove this letter (backspace)
+						cursorElem.remove();
+					}
 					break;
 				case 13: //enter key
 					e.preventDefault();
