@@ -771,9 +771,57 @@ function updateCode(){
 							var letter=letterArray[l];
 							txt+=gLetterMarkup(letter,json);
 						}
-						txtElem.html(txt); //set the letters surronded by <l>
+						//get the original text width
+						var txtWidth=txtElem.innerWidth();
+						//set the letters surronded by <l> updated text html
+						txtElem.html(txt);
 						//add the dynamic events to the new <l>etter elements
 						evsLetters(txtElem);
+						//if the mouse actually clicked the button
+						if(btn.hasClass('over')){
+							//figure out which letter to add the cursor to first based on click position
+							var mouseLeft=e.clientX;
+							var txtLeft=txtElem.offset().left;
+							//if the mouse is NOT left of the text's left edge (shouldn't be IF clicked)
+							if(mouseLeft>=txtLeft){
+								//get the mouse position, relative to the text element
+								mouseLeft=mouseLeft-txtLeft;
+								//if the mouse is NOT right of the text's right edge (shouldn't be IF clicked)
+								if(mouseLeft<=txtWidth){
+									//calculate the percentage that the mouse cursor is centered horizontally in the text element
+									var mouseLeftPercent=mouseLeft/txtWidth*100;
+									//for each letter
+									var lettersWidth=0;
+									txtElem.children('l').each(function(){
+										//accumulate the letters width
+										var letterWidth=jQuery(this).outerWidth();
+										lettersWidth+=letterWidth;
+										//calculate current width percent
+										var currentPercent=lettersWidth/txtWidth*100;
+										//if the percent is greater or equal to the cursor position percent
+										if(currentPercent>=mouseLeftPercent){
+											//if there is NO previous letter
+											var addCursorElem=jQuery(this).prev('l:first');
+											if(addCursorElem.length<1){
+												//the clicked letter is the first letter
+												addCursorElem=jQuery(this);
+												//make sure the cursor will appear to the left of the first letter
+												addCursorElem.addClass('before');
+											}
+											//if this isn't already where the cursor is located
+											if(!addCursorElem.hasClass('cursor')){
+												//clear the default cursor class and before class
+												txtElem.children('l.cursor').removeClass('cursor').not(addCursorElem).removeClass('before');
+												//set the cursor on the letter that's closest to the mouse position
+												addCursorElem.addClass('cursor');
+											}
+											//force the letter loop to end
+											return false;
+										}
+									});
+								}
+							}
+						}
 					}else{
 						//new text is being added (NOT modifying existing text)...
 						//***
