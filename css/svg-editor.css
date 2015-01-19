@@ -24,7 +24,8 @@
 #code g.empty > x,#code g.closed > x.first,#code e > x,#code e:hover > x.last{display:inline-block;width:1.4em;height:1em;vertical-align:middle;}
 #code g.closed > x.first{width:auto;}
 #code g.closed > x.first:after{content:"...";}
-#code g{display:block;position:relative;}
+#code g{display:block;position:relative;
+  -webkit-touch-callout:none;-webkit-user-select:none;-khtml-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;}
 #code g g{margin-left:1.5em;}
 #code g > oc{display:inline-block;cursor:pointer;position:absolute;left:-.8em;top:.1em;}
 #code g > oc:after{content:"";display:inline-block;width:0;height:0;border-style:solid;border-color:transparent;border-width:.35em;}
