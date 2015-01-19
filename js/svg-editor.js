@@ -470,7 +470,7 @@ function updateCode(){
 			//attach events to the new <l class="cursor before blank"> letter
 			evsLetters(txtElem);
 		};
-		//detect special key press (ctl, alt, shift)
+		//detect special key press (ctl, alt, shift...)
 		var isSpecialKeyHeld=function(e){
 			var isSpecial=true;
 			//if event is defined
@@ -490,6 +490,23 @@ function updateCode(){
 				isSpecial=false;
 			}
 			return isSpecial;
+		};
+		//detect Ctl OR Command key
+		var isCtlKeyHeld=function(e){
+			var isCtl=false;
+			//if event is defined
+			if(e!=undefined){
+				//if normal ctl key held
+				if(e.ctrlKey!=undefined&&e.ctrlKey){
+					isCtl=true;
+				}else{
+					//if Mac command key held
+					if(e.metaKey!=undefined&&e.metaKey){
+						isCtl=true;
+					}
+				}
+			}
+			return isCtl;
 		};
 		//blur event
 		clickEditElems.blur(function(){
