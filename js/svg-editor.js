@@ -323,6 +323,8 @@ function updateCode(){
 						}
 						//reset the initial down letter
 						txtElem.children('l.down').removeClass('down');
+						//align the hidden <input> val with the selected letters (if any selected)
+						inputSelectedTxt(txtElem);
 					}
 				};
 				lElems.mouseup(function(){txtMouseUp();});
@@ -385,6 +387,8 @@ function updateCode(){
 				txtParent.children('.down').removeClass('down');
 				//indicate that the mousedown happened on this letter
 				lElem.addClass('down');
+				//shouldn't be able to Ctl+C any text until selection ends on mouseup
+				txtParent.children('input:last').val('');
 			});
 			//mouse move
 			lElems.mousemove(function(){
@@ -443,6 +447,48 @@ function updateCode(){
 				//add the new cursor position
 				cursorLElem.addClass('cursor');
 			});
+		};
+
+		//set the selected text in the hidden <input> element so that Ctl+C will copy the selected
+		var inputSelectedTxt=function(txtElem){
+			//if the txtElem exists
+			if(txtElem!=undefined&&txtElem.length>0){
+				//get the hidden <input> element
+				var inputElem=txtElem.parent().children('input:last');
+				//if there are any selected letters
+				var selElems=txtElem.children('l.sel');
+				if(selElems.length>0){
+					//get the selected string... for each selected letter
+					var val='';
+					selElems.each(function(){
+						//get the letter
+						var letter=jQuery(this).html();
+						//decode the letter
+						if(letter=='&nbsp;'){letter=' ';}
+						//append the letter to the string val
+						val+=letter;
+					});
+					//set the selected text into the hidden <input>
+					inputElem.val(val);
+				}else{
+					//no selected letters... so the hidden <input> should be blank
+					inputElem.val('');
+				}
+				//select the text in the hidden <input> so that it can be Ctl+C, Ctl+X copied, etc...
+				inputElem.focus();inputElem.select();
+			}
+		};
+		//function to select ALL of the <txt>
+		var selectAllTxt=function(txtElem){
+			//if the txtElem exists
+			if(txtElem!=undefined&&txtElem.length>0){
+				//select all of the text and remove the cursor
+				txtElem.children('l').addClass('sel').removeClass('cursor');
+				//put the cursor at the start of the text
+				txtElem.children('l:first').addClass('before').addClass('cursor');
+				//write the selected text to the hidden <input> so that Ctl+C works
+				inputSelectedTxt(txtElem);
+			}
 		};
 		//function to set txt element as empty
 		var setBlankTxt=function(txtElem){
@@ -523,76 +569,81 @@ function updateCode(){
 		//key events
 		var keyup_timeout;
 		clickEditElems.keyup(function(e){
-			//get the typed value
-			var typedVal=jQuery(this).val();
-			//init the property that saves the typed value, if necessary
-			if(!jQuery(this)[0].hasOwnProperty('typedVal')){
-				jQuery(this)[0]['typedVal']='';
-			}
-			//accumulate the typed value
-			jQuery(this)[0].typedVal+=typedVal;
-			//clear the input value
-			jQuery(this).val('');
-			//get the input element
-			var inputElem=jQuery(this);
-			//cancel previous keyup
-			clearTimeout(keyup_timeout);
-			keyup_timeout=setTimeout(function(){
-				//if the typed value property is initialized
-				if(inputElem[0].hasOwnProperty('typedVal')){
-					//get the value from the hidden input field and clear input field
-					var val=inputElem[0].typedVal;
-					//if the input field is not blank
-					if(val.length>0){
-						//reset the typed value
-						inputElem[0].typedVal='';
-						//split up each character
-						var letterArray=val.split('');val='';
-						//for each character
-						for(var l=0;l<letterArray.length;l++){
-							//if last letter... then add cursor class
-							var json={};
-							if(l==letterArray.length-1){json['cursorClass']='cursor'}
-							//get the letter markup
-							var letter=letterArray[l];
-							val+=gLetterMarkup(letter,json);
-						}
-						//get the letter <l> that has the cursor
-						var btn=inputElem.parent();
-						var txtElem=btn.children('txt:first');
-						var cursorElem=txtElem.children('l.cursor:first');
-						//if there is a letter with a cursor
-						if(cursorElem.length>0){
-							//remove previous cursor position
-							cursorElem.removeClass('cursor');
-							//if the cursor is before the letter
-							if(cursorElem.hasClass('before')){
+			//if <input> element is NOT being used as a clipboard (eg: Ctl+C)
+			if(!jQuery(this).hasClass('ignore-keyup')){
+				//get the typed value
+				var typedVal=jQuery(this).val();
+				//init the property that saves the typed value, if necessary
+				if(!jQuery(this)[0].hasOwnProperty('typedVal')){
+					jQuery(this)[0]['typedVal']='';
+				}
+				//accumulate the typed value
+				jQuery(this)[0].typedVal+=typedVal;
+				//clear the input value
+				jQuery(this).val('');
+				//get the input element
+				var inputElem=jQuery(this);
+				//cancel previous keyup
+				clearTimeout(keyup_timeout);
+				keyup_timeout=setTimeout(function(){
+					//if the typed value property is initialized
+					if(inputElem[0].hasOwnProperty('typedVal')){
+						//get the value from the hidden input field and clear input field
+						var val=inputElem[0].typedVal;
+						//if the input field is not blank
+						if(val.length>0){
+							//reset the typed value
+							inputElem[0].typedVal='';
+							//split up each character
+							var letterArray=val.split('');val='';
+							//for each character
+							for(var l=0;l<letterArray.length;l++){
+								//if last letter... then add cursor class
+								var json={};
+								if(l==letterArray.length-1){json['cursorClass']='cursor'}
+								//get the letter markup
+								var letter=letterArray[l];
+								val+=gLetterMarkup(letter,json);
+							}
+							//get the letter <l> that has the cursor
+							var btn=inputElem.parent();
+							var txtElem=btn.children('txt:first');
+							var cursorElem=txtElem.children('l.cursor:first');
+							//if there is a letter with a cursor
+							if(cursorElem.length>0){
 								//remove previous cursor position
-								cursorElem.removeClass('before');
-								//add new letters before the previous cursor
-								cursorElem.before(val);
-							}else{
-								//cursor is after the letter...
+								cursorElem.removeClass('cursor');
+								//if the cursor is before the letter
+								if(cursorElem.hasClass('before')){
+									//remove previous cursor position
+									cursorElem.removeClass('before');
+									//add new letters before the previous cursor
+									cursorElem.before(val);
+								}else{
+									//cursor is after the letter...
 
-								//add the new letters after previous cursor
-								cursorElem.after(val);
+									//add the new letters after previous cursor
+									cursorElem.after(val);
+								}
+								//if before, this txt was blank
+								var blankElems=txtElem.children('l.blank');
+								if(blankElems.length>0){
+									//remove blank letters
+									blankElems.remove();
+									//remove blank-txt class
+									txtElem.parents('.blank-txt:first').removeClass('blank-txt');
+								}
+								//add the dynamic events to the new <l>etter elements
+								evsLetters(txtElem);
 							}
-							//if before, this txt was blank
-							var blankElems=txtElem.children('l.blank');
-							if(blankElems.length>0){
-								//remove blank letters
-								blankElems.remove();
-								//remove blank-txt class
-								txtElem.parents('.blank-txt:first').removeClass('blank-txt');
-							}
-							//add the dynamic events to the new <l>etter elements
-							evsLetters(txtElem);
 						}
 					}
-				}
-			}, 10);
+				}, 10);
+			}
 		});
 		clickEditElems.keydown(function(e){
+			//set whether the keyup event will get ignored AFTER THIS keydown
+			var ignoreKeyup=true;
 			//get btn and <txt> elements
 			var btn=jQuery(this).parent();
 			var txtElem=btn.children('txt:first');
@@ -751,6 +802,8 @@ function updateCode(){
 							txtElem.children('.sel').removeClass('sel');
 						}
 					}
+					//align the hidden <input> val with the selected letters (if any selected)
+					inputSelectedTxt(txtElem);
 				}
 			};
 			var cursorRight=function(){
@@ -797,6 +850,8 @@ function updateCode(){
 						}
 					}
 				}
+				//align the hidden <input> val with the selected letters (if any selected)
+				inputSelectedTxt(txtElem);
 			};
 			//==DO SOMETHING DEPENDING ON THE KEY CODE(S)==
 			//depending on the key downed
@@ -850,8 +905,54 @@ function updateCode(){
 					if(!isSpecialKeyHeld(e)){
 						//before keyup... delete selected letters, if any
 						deleteSelectedLetters();
+						//allow keyup
+						ignoreKeyup=false;
+					}else{
+						//some special IS being held...
+
+						//if ctl OR apple command key is being held
+						if(isCtlKeyHeld(e)){
+							//depending on which key was pressed WITH the ctl key
+							switch(e.keyCode){
+								case 65: //Ctl+A (select all)
+									e.preventDefault();
+									selectAllTxt(txtElem);
+									break;
+								case 67: //Ctl+C (copy selected)
+									//native functionality (copy from hidden <input> value)
+									break;
+								case 86: //Ctl+V (paste)
+									//native functionality (copy from hidden <input> value)
+									//before keyup... delete selected letters, if any
+									deleteSelectedLetters();
+									//allow keyup
+									ignoreKeyup=false;
+									break;
+								case 88: //Ctl+X (cut)
+									//native functionality (copy from hidden <input> value)
+									//before keyup... delete selected letters, if any
+									deleteSelectedLetters();
+									break;
+								case 90: //Ctl+Z (undo)
+									e.preventDefault();
+									//***
+									break;
+								case 89: //Ctl+Y (redo)
+									e.preventDefault();
+									//***
+									break;
+							}
+						}
 					}
 					break;
+			}
+			//if the keyup should be ignored (so that the hidden input contents DON'T get written)
+			if(ignoreKeyup){
+				//BLOCK the keyup input entry
+				txtElem.parent().children('input:last').not('.ignore-keyup').addClass('ignore-keyup');
+			}else{
+				//ALLOW the keyup input entry
+				txtElem.parent().children('input.ignore-keyup:last').removeClass('ignore-keyup');
 			}
 		});
 		//hover event
@@ -875,14 +976,9 @@ function updateCode(){
 			}else{
 				//already has dbl-click class...
 				isDblClick=true;
-				//if there is text in this btn
+				//select all of the text in <txt>, if <txt> element exists
 				var txtElem=btn.children('txt:first');
-				if(txtElem.length>0){
-					//select all of the text and remove the cursor
-					txtElem.children('l').addClass('sel').removeClass('cursor');
-					//put the cursor at the start of the text
-					txtElem.children('l:first').addClass('before').addClass('cursor');
-				}
+				selectAllTxt(txtElem);
 			}
 			//if NOT double clicked
 			if(!isDblClick){
