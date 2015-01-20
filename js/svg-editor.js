@@ -901,7 +901,7 @@ function updateCode(){
 					//***
 					break;
 				default:
-					//if a special key, like the apple command key (different code on different systems) is NOT being pressed
+					//if NOT holding a special key, like ctl, command, shift, alt...
 					if(!isSpecialKeyHeld(e)){
 						//before keyup... delete selected letters, if any
 						deleteSelectedLetters();
@@ -941,6 +941,16 @@ function updateCode(){
 									e.preventDefault();
 									//***
 									break;
+							}
+						}else{
+							//a special key OTHER THAN ctl/command is pressed...
+
+							//if SHIFT is being pressed
+							if(e.shiftKey!=undefined&&e.shiftKey){
+								//before keyup... delete selected letters, if any
+								deleteSelectedLetters();
+								//allow keyup (capital letters)
+								ignoreKeyup=false;
 							}
 						}
 					}
