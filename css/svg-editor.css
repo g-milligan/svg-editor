@@ -20,7 +20,7 @@
 #code txt{vertical-align:middle;display:inline;}
 #code input{color:transparent;opacity:0;position:fixed;left:-9999px;top:-9999px;max-width:100px;max-height:25px;border:none;outline:none;}
 #code x{display:block;height:.4em;cursor:pointer;border-radius:1em;position:relative;}
-#code x suggest{opacity:0;position:absolute;top:100%;left:0;display:block;overflow:auto;border:solid .1em #ccc;box-shadow:-.1em .1em .2em rgba(0,0,0,.1);background-color:#fff;}
+#code x suggest{opacity:0;position:absolute;top:100%;left:0;display:block;overflow:auto;border:solid .1em #ccc;box-shadow:-.1em .1em .2em rgba(0,0,0,.1);background-color:#fff;z-index:9999;}
 #code x.active suggest{opacity:1;}
 #code x suggest it{display:block;padding:.1em .5em;font-size:97%;color:#000;white-space:nowrap;}
 #code x suggest it:hover{background-color:#F2F2F2;}
