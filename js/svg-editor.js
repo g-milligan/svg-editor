@@ -232,6 +232,7 @@ function updateCode(){
 						if(btn.hasClass('focus')){
 							//remove the focus and over classes
 							btn.removeClass('focus');
+							btn.removeClass('active');
 							btn.removeClass('over');
 							//get <txt>
 							var txtElem=btn.children('txt:first');
@@ -1150,8 +1151,14 @@ function updateCode(){
 									//set the events for the suggestion popup (should go away in the clearFocus method)
 									//***
 								}
-								//show the suggestions
-								btn.addClass('active');
+								//show the suggestions after a delay (so the css transition works)
+								setTimeout(function(){
+									//if button still has focus
+									if(btn.hasClass('focus')){
+										//show the suggest menu
+										btn.addClass('active');
+									}
+								},100);
 							}
 						}else{
 							//node...
