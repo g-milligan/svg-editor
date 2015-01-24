@@ -977,36 +977,24 @@ function updateCode(){
 		btnElems.click(function(e){
 			var btn=jQuery(this);
 			var btnTag=btn[0].tagName.toLowerCase();
-			if(btnTag!='x'){
-				//set the focus of this hidden <input> (make sure it's set)
-				var focusInput=btn.children('input:last');
-				focusInput.focus();
-				//if NOT already has double click class
-				var isDblClick=false;
-				if(!btn.hasClass('dbl-click')){
-					//add dble click class... then remove the class after a delay
-					btn.addClass('dbl-click');
-					setTimeout(function(){btn.removeClass('dbl-click')},185);
-				}else{
-					//already has dbl-click class...
-					isDblClick=true;
-					//select all of the text in <txt>, if <txt> element exists
+			//set the focus of this hidden <input> (make sure it's set)
+			var focusInput=btn.children('input:last');
+			focusInput.focus();
+			//function to set the focus on the clicked btn element
+			var setBtnFocus=function(){
+				//if NOT already has focus
+				if(!btn.hasClass('focus')){
+					//set the focus class of this element
+					btn.addClass('focus');
+					//clear previous focus (but keep focus on btn)
+					clearFocus(btn);
+					//if there is existing text being modified (should be)
 					var txtElem=btn.children('txt:first');
-					selectAllTxt(txtElem);
-				}
-				//if NOT double clicked
-				if(!isDblClick){
-					//if NOT already has focus
-					if(!btn.hasClass('focus')){
-						//set the focus class of this element
-						btn.addClass('focus');
-						//clear previous focus (but keep focus on btn)
-						clearFocus(btn);
-						//if there is existing text being modified (should be)
-						var txtElem=btn.children('txt:first');
-						if(txtElem.length>0){
-							//get the input text
-							var txt=txtElem.text(); txt=txt.trim();
+					if(txtElem.length>0){
+						//get the input text
+						var txt=txtElem.text(); txt=txt.trim();
+						//if the text is NOT blank
+						if(txt.length>0){
 							//record this previous text, before EDITS are made
 							txtElem[0]['previousText']=txt;
 							//split up each character
@@ -1022,10 +1010,8 @@ function updateCode(){
 							}
 							//get the original text width
 							var txtWidth=txtElem.innerWidth();
-							//set the letters surronded by <l> updated text html
+							//set the letters surrounded by <l> updated text html
 							txtElem.html(txt);
-							//add the dynamic events to the new <l>etter elements
-							evsLetters(txtElem);
 							//if the mouse actually clicked the button
 							if(btn.hasClass('over')){
 								//figure out which letter to add the cursor to first based on click position
@@ -1071,15 +1057,43 @@ function updateCode(){
 									}
 								}
 							}
+						}else{
+							//there is no text inside <txt> ...
+
+							//add the cursor inside this <txt> element
+							txtElem.html('<l class="blank before cursor"></l>');
 						}
+						//add the dynamic events to the new <l>etter elements
+						evsLetters(txtElem);
 					}
+				}
+			};
+			//if NOT an <x> btn element
+			if(btnTag!='x'){
+				//if NOT already has double click class
+				var isDblClick=false;
+				if(!btn.hasClass('dbl-click')){
+					//add dble click class... then remove the class after a delay
+					btn.addClass('dbl-click');
+					setTimeout(function(){btn.removeClass('dbl-click')},185);
+				}else{
+					//already has dbl-click class...
+					isDblClick=true;
+					//select all of the text in <txt>, if <txt> element exists
+					var txtElem=btn.children('txt:first');
+					selectAllTxt(txtElem);
+				}
+				//if NOT double clicked
+				if(!isDblClick){
+					//finish setting the clicked button's focus
+					setBtnFocus();
 				}
 			}else{
 				//clicked on an <x> btn to create a new node...
 
 				//get parent element of <x>
 				var suggestCode=true;
-				var xParent=jQuery(this).parent();
+				var xParent=btn.parent();
 				//get the <x> type (attribute OR node?)
 				var xType=xParent[0].tagName.toLowerCase();
 				//if <g>roup node
@@ -1095,13 +1109,15 @@ function updateCode(){
 						}
 					}
 				}
-				//if a code suggestion is needed
+				//if a code suggestion is needed (if so, then user can enter text)
 				if(suggestCode){
+					//create a <txt> element and finish setting the cursor focus for this empty <txt> element
+					btn.prepend('<txt></txt>'); setBtnFocus();
 					//get the full code completion json
 					var ccJson=code_completion();
 					//get the parent's name for this <x> element
 					var parentName='//';
-					var parentNameElem=jQuery(this).parents('[n]:first');
+					var parentNameElem=btn.parents('[n]:first');
 					//if the root is NOT the parent
 					if(parentNameElem.length>0){
 						//get the parent name
@@ -1115,11 +1131,11 @@ function updateCode(){
 							//if any attribute suggestions are available
 							if(json.hasOwnProperty('attr')){
 								//create the suggestion popup if it doesn't already exist
-								var suggestWrap=jQuery(this).children('suggest:first');
+								var suggestWrap=btn.children('suggest:first');
 								if(suggestWrap.length<1){
 									//create the suggestions wrapper
-									jQuery(this).append('<suggest></suggest>');
-									suggestWrap=jQuery(this).children('suggest:first');
+									btn.append('<suggest></suggest>');
+									suggestWrap=btn.children('suggest:first');
 									var attrIndex=0;
 									//for each suggested attribute
 									for (var attrName in json.attr){
@@ -1131,11 +1147,11 @@ function updateCode(){
 											attrIndex++;
 										}
 									}
-									//set the events for the suggestion popup
+									//set the events for the suggestion popup (should go away in the clearFocus method)
 									//***
 								}
 								//show the suggestions
-								jQuery(this).addClass('active');
+								btn.addClass('active');
 							}
 						}else{
 							//node...

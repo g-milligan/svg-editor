@@ -4,8 +4,10 @@ function code_completion(){
     '//':{
       //child node suggestions
       'child':{
-        'elem':['svg'],
-        'cdata':true,'comment':true,'text':true
+        'cdata':true,'comment':true,'text':true,
+        'elem':[
+          {'tag':'svg'}
+        ]
       }
     },
     //has svg parent element
@@ -28,8 +30,17 @@ function code_completion(){
       },
       //child node suggestions
       'child':{
-        'elem':['circle','ellipse','line','path','polygon','polyline','rect','text'],
-        'cdata':true,'comment':true,'text':true
+        'cdata':true,'comment':true,'text':true,
+        'elem':[
+          {'tag':'circle'},
+          {'tag':'ellipse'},
+          {'tag':'line'},
+          {'tag':'path'},
+          {'tag':'polygon'},
+          {'tag':'polyline'},
+          {'tag':'rect'},
+          {'tag':'text'}
+        ]
       }
     }
   };
