@@ -183,7 +183,7 @@ function updateCode(){
 			//make sure the code element ends with a <x> element
 			codeElem.append('<x class="last"><input type="text" /></x>');
 		}
-		//function to attach the source editor events to the xml elements ***
+		//function to attach the source editor events to the xml elements
 		var evsSourceEditor=function(rootElem){
 			if(rootElem==undefined){rootElem=codeElem;}
 			//==OPEN/CLOSE ELEMENT EVENTS==
@@ -249,6 +249,11 @@ function updateCode(){
 								//get new text
 								var newTxt=txtElem.text(); newTxt=newTxt.trim();
 								newTxt=replaceAll(newTxt,'&nbsp;',' ');
+								//if there was no previous text
+								if(!txtElem[0].hasOwnProperty('previousText')){
+									//set previous text as blank
+									txtElem[0]['previousText']='';
+								}
 								//if the new text is different from the old text
 								if(newTxt!=txtElem[0].previousText){
 									//make sure the new text is set
@@ -293,7 +298,7 @@ function updateCode(){
 												}
 												//create the new xml to add
 												var xHtml='<x{pos-class}><input type="text" /></x>';
-												var attrHtml='<kv><k><space> </space><txt>'+newTxt+'</txt><input type="text" /></k>="<v><txt>'+attrVal+'</txt><input type="text" /></v>"</kv>';
+												var attrHtml='<kv><k><space> </space><txt>'+newTxt+'</txt><input type="text" /></k>="<v><txt>'+attrVal+'</txt><input type="text" class="ignore-keyup" /></v>"</kv>';
 												//if this is the LAST <x> element
 												if(btn.hasClass('last')){
 													//this btn will no longer be last <x>
@@ -308,13 +313,13 @@ function updateCode(){
 												btn.after(attrHtml+xHtml);
 												//get the new <kv> element
 												var newKvElem=btn.next('kv:first');
-												//recursive call: add the events to the new <kv> element
-												evsSourceEditor(newKvElem);
+												//recursive call: add the events to the new <kv><x> elements
+												evsSourceEditor(newKvElem.parent());
 												//get the new <v> element
 												var newVElem=newKvElem.children('v:first');
-												//set the cursor in the new v element (double clicked to select text)
+												//set the cursor in the new v element
 												newVElem.click();
-												newVElem.click();
+												newVElem.click(); //double clicked to select text, and show value suggestions
 												break;
 											default: //create new ELEMENT
 												//***
@@ -950,7 +955,8 @@ function updateCode(){
 						break;
 					case 13: //enter key
 						e.preventDefault();
-						//***
+						//enter value and remove focus from this btn
+						clearFocus();
 						break;
 					case 91: //apple command key
 						e.preventDefault();
