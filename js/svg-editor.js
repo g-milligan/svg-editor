@@ -650,6 +650,16 @@ function updateCode(){
 				}
 				return isSpecial;
 			};
+			//detect shift key
+			var isShiftKeyHeld=function(e){
+				var isShift=false;
+				if(e!=undefined){
+					if(e.shiftKey!=undefined&&e.shiftKey){
+						isShift=true;
+					}
+				}
+				return isShift;
+			};
 			//detect Ctl OR Command key
 			var isCtlKeyHeld=function(e){
 				var isCtl=false;
@@ -759,6 +769,9 @@ function updateCode(){
 				var ignoreKeyup=true;
 				//get btn and <txt> elements
 				var btn=jQuery(this).parent();
+				var btnTag=btn[0].tagName.toLowerCase();
+				var btnParent=btn.parent();
+				var btnParentTag=btnParent[0].tagName.toLowerCase();
 				var txtElem=btn.children('txt:first');
 				var cursorElem=txtElem.children('.cursor:first');
 				//==INTERNAL FUNCTIONS==
@@ -872,9 +885,181 @@ function updateCode(){
 						}
 					}
 				};
+				//get the NEXT or PREV editable element, based on current focus element
+				var getNextPrevBtn=function(nextOrPrev){
+					var returnBtn;
+					switch(btnTag){
+						case 'x': //currently at <x> (new item) button
+							//if this is a new item button for attributes
+							if(btnParentTag=='e'){
+								//previous or next button?
+								switch(nextOrPrev){
+									case 'prev':
+										var prevBtn=btn.prev(':first');
+										var prevTagName=prevBtn[0].tagName.toLowerCase();
+										//what's the previous btn's tag name?
+										switch(prevTagName){
+											case 'n':
+												returnBtn=prevBtn;
+												break;
+											case 'kv':
+												returnBtn=prevBtn.children('v:last');
+												break;
+										}
+										break;
+									case 'next':
+										//if NOT the last <x> in the attribute list
+										if(!btn.hasClass('last')){
+											var nextBtn=btn.next(':first'); //get next <kv>
+											returnBtn=nextBtn.children('k:last');
+										}else{
+											//this IS the last <x> in the attribute list
+
+											//if the <g>roup parent is closed
+											var gParentElem=btnParent.parent();
+											if(gParentElem.hasClass('closed')){
+												//open parent <g>roup (parent of <e>)
+												gParentElem.children('oc:first').click();
+											}
+											//get the <x> after the <e>
+											var nextX=btnParent.next('x:first');
+											returnBtn=nextX;
+										}
+										break;
+								}
+							}else{
+								//new item <x> button for elements...
+
+								//previous or next button?
+								switch(nextOrPrev){
+									case 'prev':
+										//if NOT the first <x> button in this level
+										if(!btn.hasClass('first')){
+											//get the prev <g>roup element before this <x> button
+											var gPrevElem=btn.prev('g:first');
+											//if <g> element is closed
+											if(gPrevElem.hasClass('closed')){
+												//open the <g>roup
+												gPrevElem.children('oc:first').click();
+											}
+											//get the last <x> button under this <g>roup
+											var xPrevElem=gPrevElem.children('x.last:last');
+											returnBtn=xPrevElem;
+										}else{
+											//first <x> button in this level
+
+											//if there is a previous <e> (otherwise, this is probably the very first <x>)
+											var prevE=btn.prev('e:first');
+											if(prevE.length>0){
+												//get the last <x> under the previous <e>
+												var prevX=prevE.children('x.last:last');
+												returnBtn=prevX;
+											}
+										}
+										break;
+									case 'next':
+										//if NOT the last <x> button in this level
+										if(!btn.hasClass('last')){
+											//get the next <g>roup element after this <x> button
+											var gNextElem=btn.next('g:first');
+											//if <g> element is closed
+											if(gNextElem.hasClass('closed')){
+												//open the <g>roup
+												gNextElem.children('oc:first').click();
+											}
+											//get the first <e> child under <g>
+											var eNextElem=gNextElem.children('e:first');
+											//get the first <n> child under <e>
+											var nNextElem=eNextElem.children('n:first');
+											returnBtn=nNextElem;
+										}else{
+											//last <x> button in this level
+
+											//if there is a parent <g>roup (otherwise, this is probably the very last <x>)
+											var gParentElem=btn.parent('g');
+											if(gParentElem.length>0){
+												//get the first <x> after this <g>roup
+												var xNextElem=gParentElem.next('x:first');
+												returnBtn=xNextElem;
+											}
+										}
+										break;
+								}
+							}
+							break;
+						case 'n': //currently at element <n>ame button
+							//previous or next button?
+							switch(nextOrPrev){
+								case 'prev':
+									//get the previous <x> element before the parent <g>roup
+									var gParentElem=btn.parents('g:first');
+									var xPrevElem=gParentElem.prev('x:first');
+									returnBtn=xPrevElem;
+									break;
+								case 'next':
+									//get the next <x> after the current <k>
+									var xNextElem=btn.next('x:first');
+									returnBtn=xNextElem;
+									break;
+							}
+							break;
+						case 'k': //currently at attribute <k>ey button
+							//previous or next button?
+							switch(nextOrPrev){
+								case 'prev':
+									//get the <x> before the <kv> parent
+									var xPrevElem=btnParent.prev('x:first');
+									returnBtn=xPrevElem;
+									break;
+								case 'next':
+									//get the next <v> after this <k>
+									var vNextElem=btn.next('v:first');
+									returnBtn=vNextElem;
+									break;
+							}
+							break;
+						case 'v': //currently at attribute <v>alue button
+							//previous or next button?
+							switch(nextOrPrev){
+								case 'prev':
+									//get the previous <k> before the current <v>
+									var kPrevElem=btn.prev('k:first');
+									returnBtn=kPrevElem;
+									break;
+								case 'next':
+									//get the next <x> after the <kv>
+									var xNextElem=btnParent.next('x:first');
+									returnBtn=xNextElem;
+									break;
+							}
+							break;
+					}
+					return returnBtn;
+				}
+				//jump to the previous input field
+				var skipLeft=function(){
+					var prevBtn=getNextPrevBtn('prev');
+					if(prevBtn!=undefined){
+						prevBtn.click();
+					}
+					return prevBtn;
+				};
+				//jump to the next input field
+				var skipRight=function(){
+					var nextBtn=getNextPrevBtn('next');
+					if(nextBtn!=undefined){
+						nextBtn.click();
+						//put the cursor at the start
+						var firstL=nextBtn.find('txt l:first');
+						nextBtn.find('txt l.cursor').not(firstL).removeClass('cursor');
+						firstL.addClass('before').addClass('cursor');
+					}
+					return nextBtn;
+				};
 				var cursorLeft=function(){
 					//if NOT already at the left of the first letter
 					if(!cursorElem.hasClass('before')){
+						var focusTxtElem=txtElem;
 						//if there is a previous element
 						var prevElem=cursorElem.prev('l:first');
 						if(prevElem.length>0){
@@ -882,7 +1067,7 @@ function updateCode(){
 							cursorElem.removeClass('cursor');
 							prevElem.addClass('cursor');
 							//need to select
-							if(isSpecialKeyHeld(e)){
+							if(isShiftKeyHeld(e)){
 								//if NOT already selected
 								if(!cursorElem.hasClass('sel')){
 									//add the selected class
@@ -894,6 +1079,12 @@ function updateCode(){
 							}else{
 								//no letter should be selected
 								txtElem.children('.sel').removeClass('sel');
+								//if the ctl key is being held
+								if(isCtlKeyHeld(e)){
+									//move the cursor to the beginning
+									prevElem.removeClass('cursor');
+									txtElem.children('l:first').addClass('before').addClass('cursor');
+								}
 							}
 						}else{
 							//no previous element...
@@ -901,7 +1092,7 @@ function updateCode(){
 							//move the cursor to the left of this element
 							cursorElem.addClass('before');
 							//need to select
-							if(isSpecialKeyHeld(e)){
+							if(isShiftKeyHeld(e)){
 								//if NOT already selected
 								if(!cursorElem.hasClass('sel')){
 									//add the selected class
@@ -913,19 +1104,27 @@ function updateCode(){
 							}else{
 								//no letter should be selected
 								txtElem.children('.sel').removeClass('sel');
+								//if the ctl key is being held
+								if(isCtlKeyHeld(e)){
+									//move to the left btn (like shift+tab)
+									var prevBtn=skipLeft();
+									//get the new <txt> element that has focus
+									focusTxtElem=prevBtn.children('txt:first');
+								}
 							}
 						}
 						//align the hidden <input> val with the selected letters (if any selected)
-						inputSelectedTxt(txtElem);
+						inputSelectedTxt(focusTxtElem);
 					}
 				};
 				var cursorRight=function(){
+					var focusTxtElem=txtElem;
 					//if at the left of the first letter
 					if(cursorElem.hasClass('before')){
 						//move the cursor to the right side of this element
 						cursorElem.removeClass('before');
 						//need to select
-						if(isSpecialKeyHeld(e)){
+						if(isShiftKeyHeld(e)){
 							//if NOT already selected
 							if(!cursorElem.hasClass('sel')){
 								//add the selected class
@@ -937,6 +1136,13 @@ function updateCode(){
 						}else{
 							//no letter should be selected
 							txtElem.children('.sel').removeClass('sel');
+							//if the ctl key is being held
+							if(isCtlKeyHeld(e)){
+								//move the cursor to the right of th last letter
+								var lastLElem=txtElem.children('l:last');
+								txtElem.children('l.cursor').not(lastLElem).removeClass('cursor');
+								lastLElem.addClass('cursor');
+							}
 						}
 					}else{
 						//not at the left of the first letter...
@@ -948,7 +1154,7 @@ function updateCode(){
 							cursorElem.removeClass('cursor');
 							nextElem.addClass('cursor');
 							//need to select
-							if(isSpecialKeyHeld(e)){
+							if(isShiftKeyHeld(e)){
 								//if NOT already selected
 								if(!nextElem.hasClass('sel')){
 									//add the selected class
@@ -960,11 +1166,29 @@ function updateCode(){
 							}else{
 								//no letter should be selected
 								txtElem.children('.sel').removeClass('sel');
+								//if the ctl key is being held
+								if(isCtlKeyHeld(e)){
+									//move the cursor to the last letter
+									nextElem.removeClass('cursor');
+									txtElem.children('l:last').addClass('cursor');
+								}
+							}
+						}else{
+							//if already at the last letter...
+
+							//no letter should be selected
+							txtElem.children('.sel').removeClass('sel');
+							//if the ctl key is being held
+							if(isCtlKeyHeld(e)){
+								//move to the right button (like tab)
+								var nextBtn=skipRight();
+								//get the new <txt> element that has focus
+								focusTxtElem=nextBtn.children('txt:first');
 							}
 						}
 					}
 					//align the hidden <input> val with the selected letters (if any selected)
-					inputSelectedTxt(txtElem);
+					inputSelectedTxt(focusTxtElem);
 				};
 				//==DO SOMETHING DEPENDING ON THE KEY CODE(S)==
 				//depending on the key downed
@@ -996,7 +1220,17 @@ function updateCode(){
 						break;
 					case 9: //tab key
 						e.preventDefault();
-						//***
+						//if the SHIFT key IS being held
+						if(isShiftKeyHeld(e)){
+							//jump left instead of right
+							skipLeft();
+						}else{
+							//if some other special key is NOT being held... as in alt+tab or cmd+tab
+							if(!isSpecialKeyHeld(e)){
+								//jump right
+								skipRight();
+							}
+						}
 						break;
 					case 37: //left arrow
 						e.preventDefault();
