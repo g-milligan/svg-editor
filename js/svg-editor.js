@@ -221,6 +221,30 @@ function updateCode(){
 			//function to clear the current focus
 			var clearFocus=function(keepFocusBtn){
 				var anyChanges=false;
+				//if there are any elements with "blank-txt" then remove these elements
+				var blankTxtElems=codeElem.find('.blank-txt');
+				if(blankTxtElems.length>0){
+					//for each blank txt element
+					blankTxtElems.each(function(){
+						var blankTxtElem=jQuery(this);
+						//NOTE: the blank txt element will either be <g> or <kv>
+						var xNextElem=blankTxtElem.next('x:first');
+						//if the <x> button, after blankTxtElem, is the last one
+						if(xNextElem.hasClass('last')){
+							//this xNextElem, will no longer be the last...
+							var xPrevElem=blankTxtElem.prev('x:first');
+							//the previous <x> element will be last instead
+							xNextElem.removeClass('last');
+							xPrevElem.addClass('last');
+						}
+						//remove the <x> element after blankTxtElem
+						xNextElem.remove();
+						//remove blankTxtElem
+						blankTxtElem.remove();
+						//changes made
+						anyChanges=true;
+					});
+				}
 				//if there are any buttons with focus
 				var clearBtns=codeElem.find('.focus');
 				if(clearBtns.length>0){
@@ -249,11 +273,6 @@ function updateCode(){
 								//get new text
 								var newTxt=txtElem.text(); newTxt=newTxt.trim();
 								newTxt=replaceAll(newTxt,'&nbsp;',' ');
-								//if there was no previous text
-								if(!txtElem[0].hasOwnProperty('previousText')){
-									//set previous text as blank
-									txtElem[0]['previousText']='';
-								}
 								//if the new text is different from the old text
 								if(newTxt!=txtElem[0].previousText){
 									//make sure the new text is set
@@ -262,6 +281,8 @@ function updateCode(){
 									anyChanges=true;
 									//if text was entered into an <x> element (then a new node must be created)
 									if(btnTag=='x'){
+										//reset the previous text for <x> element
+										txtElem[0].previousText=undefined;
 										//clear out the temporary text inside the <x> button
 										txtElem.html('');
 										//get the full code completion json
@@ -320,6 +341,8 @@ function updateCode(){
 												//set the cursor in the new v element
 												newVElem.click();
 												newVElem.click(); //double clicked to select text, and show value suggestions
+												//if the <v> value is starting blank, with no default value
+												if(attrVal.length<1){newKvElem.addClass('blank-txt');}
 												break;
 											default: //create new ELEMENT
 												//***
