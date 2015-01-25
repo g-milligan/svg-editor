@@ -301,48 +301,51 @@ function updateCode(){
 										var parentTag=parentElem[0].tagName.toLowerCase();
 										switch(parentTag){
 											case 'e': //create new ATTRIBUTE
-												//retrieve the suggested default attribute value, if there is one
-												var attrVal='';
-												if(parentJson!=undefined){
-													//if this parent node has a attr suggestion collection
-													if(parentJson.hasOwnProperty('attr')){
-														//if this attribute suggestion collection has a default value for this newTxt key
-														var attrJson=parentJson.attr;
-														if(attrJson.hasOwnProperty(newTxt)){
-															//if this attr kv suggestion has a default value suggestion
-															kvJson=attrJson[newTxt];
-															if(kvJson.hasOwnProperty('default')){
-																attrVal=kvJson.default;
+												//if the <x> attr key text NOT blank
+												if(newTxt.trim().length>0){
+													//retrieve the suggested default attribute value, if there is one
+													var attrVal='';
+													if(parentJson!=undefined){
+														//if this parent node has a attr suggestion collection
+														if(parentJson.hasOwnProperty('attr')){
+															//if this attribute suggestion collection has a default value for this newTxt key
+															var attrJson=parentJson.attr;
+															if(attrJson.hasOwnProperty(newTxt)){
+																//if this attr kv suggestion has a default value suggestion
+																kvJson=attrJson[newTxt];
+																if(kvJson.hasOwnProperty('default')){
+																	attrVal=kvJson.default;
+																}
 															}
 														}
 													}
+													//create the new xml to add
+													var xHtml='<x{pos-class}><input type="text" /></x>';
+													var attrHtml='<kv><k><space> </space><txt>'+newTxt+'</txt><input type="text" /></k>="<v><txt>'+attrVal+'</txt><input type="text" class="ignore-keyup" /></v>"</kv>';
+													//if this is the LAST <x> element
+													if(btn.hasClass('last')){
+														//this btn will no longer be last <x>
+														btn.removeClass('last');
+														//add the last class to the new <x> element
+														xHtml=xHtml.replace('{pos-class}',' class="last"');
+													}else{
+														//the new <x> button doesn't have a "last" class
+														xHtml=xHtml.replace('{pos-class}','');
+													}
+													//set the new xml
+													btn.after(attrHtml+xHtml);
+													//get the new <kv> element
+													var newKvElem=btn.next('kv:first');
+													//recursive call: add the events to the new <kv><x> elements
+													evsSourceEditor(newKvElem.parent());
+													//get the new <v> element
+													var newVElem=newKvElem.children('v:first');
+													//set the cursor in the new v element
+													newVElem.click();
+													newVElem.click(); //double clicked to select text, and show value suggestions
+													//if the <v> value is starting blank, with no default value
+													if(attrVal.length<1){newKvElem.addClass('blank-txt');}
 												}
-												//create the new xml to add
-												var xHtml='<x{pos-class}><input type="text" /></x>';
-												var attrHtml='<kv><k><space> </space><txt>'+newTxt+'</txt><input type="text" /></k>="<v><txt>'+attrVal+'</txt><input type="text" class="ignore-keyup" /></v>"</kv>';
-												//if this is the LAST <x> element
-												if(btn.hasClass('last')){
-													//this btn will no longer be last <x>
-													btn.removeClass('last');
-													//add the last class to the new <x> element
-													xHtml=xHtml.replace('{pos-class}',' class="last"');
-												}else{
-													//the new <x> button doesn't have a "last" class
-													xHtml=xHtml.replace('{pos-class}','');
-												}
-												//set the new xml
-												btn.after(attrHtml+xHtml);
-												//get the new <kv> element
-												var newKvElem=btn.next('kv:first');
-												//recursive call: add the events to the new <kv><x> elements
-												evsSourceEditor(newKvElem.parent());
-												//get the new <v> element
-												var newVElem=newKvElem.children('v:first');
-												//set the cursor in the new v element
-												newVElem.click();
-												newVElem.click(); //double clicked to select text, and show value suggestions
-												//if the <v> value is starting blank, with no default value
-												if(attrVal.length<1){newKvElem.addClass('blank-txt');}
 												break;
 											default: //create new ELEMENT
 												//***
