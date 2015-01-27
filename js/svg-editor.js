@@ -214,6 +214,31 @@ function updateCode(){
 					}
 				});
 			});
+			//function to get data from the code completion data
+			var getSuggestData=function(args){
+				var retData;
+				//get the params from args
+				var ccJson;
+				var pathArray=args.path;
+				if(args.hasOwnProperty('root')){ccJson=args.root;}
+				if(ccJson==undefined){ccJson=code_completion();}
+				//for each item passed in pathArray
+				var json=ccJson;
+				for(var i=0;i<pathArray.length;i++){
+					//if this next key exists in the json
+					var key=pathArray[i];
+					if(json.hasOwnProperty(key)){
+						//get the data at this key
+						json=json[key];
+					}else{
+						//the path wasn't fully completed, end the loop and return undefined
+						json=undefined;
+						break;
+					}
+				}
+				retData=json;
+				return retData;
+			};
 			//==EDIT XML EVENTS==
 			var clickEditElems=rootElem.find('input').not('.evs');
 			clickEditElems.addClass('evs');
@@ -259,13 +284,8 @@ function updateCode(){
 							if(btn.hasClass('focus')){
 								//remove the focus and over classes
 								btn.removeClass('focus'); btn.removeClass('over');
-								//give the fade css transition time to play
-								setTimeout(function(){
-									//if still doesn't have focus
-									if(!btn.hasClass('focus')){
-										btn.removeClass('active');
-									}
-								},200);
+								//make sure any suggest menu is closed
+								closeSuggestMenu(btn);
 								//get the tag name of btn
 								var btnTag=btn[0].tagName.toLowerCase();
 								//get <txt>
@@ -285,18 +305,13 @@ function updateCode(){
 										txtElem[0].previousText=undefined;
 										//clear out the temporary text inside the <x> button
 										txtElem.html('');
-										//get the full code completion json
-										var ccJson=code_completion();
 										//get the parent xml name, n=""
 										var parentElem=btn.parent();
 										//if the parent node has an n="" attribute (if there is no n attribute then treat the parent as the root, //)
 										var xmlParentName=parentElem.attr('n'); if(xmlParentName==undefined){xmlParentName='';}
 										if(xmlParentName.length<1){xmlParentName='//';}
 										//try to get the code completion json for this xmlParentName
-										var parentJson;
-										if(ccJson.hasOwnProperty(xmlParentName)){
-											parentJson=ccJson[xmlParentName];
-										}
+										var suggestJson=getSuggestData({'path':[xmlParentName]});
 										//the type of new node that will be created depends on the parent of <x>
 										var parentTag=parentElem[0].tagName.toLowerCase();
 										switch(parentTag){
@@ -304,21 +319,8 @@ function updateCode(){
 												//if the <x> attr key text NOT blank
 												if(newTxt.trim().length>0){
 													//retrieve the suggested default attribute value, if there is one
-													var attrVal='';
-													if(parentJson!=undefined){
-														//if this parent node has a attr suggestion collection
-														if(parentJson.hasOwnProperty('attr')){
-															//if this attribute suggestion collection has a default value for this newTxt key
-															var attrJson=parentJson.attr;
-															if(attrJson.hasOwnProperty(newTxt)){
-																//if this attr kv suggestion has a default value suggestion
-																kvJson=attrJson[newTxt];
-																if(kvJson.hasOwnProperty('default')){
-																	attrVal=kvJson.default;
-																}
-															}
-														}
-													}
+													var attrVal=getSuggestData({'root':suggestJson,'path':['attr',newTxt,'default']});
+													if(attrVal==undefined){attrVal='';}
 													//create the new xml to add
 													var xHtml='<x{pos-class}><input type="text" /></x>';
 													var attrHtml='<kv><k><space> </space><txt>'+newTxt+'</txt><input type="text" /></k>="<v><txt>'+attrVal+'</txt><input type="text" class="ignore-keyup" /></v>"</kv>';
@@ -561,6 +563,176 @@ function updateCode(){
 					//add the new cursor position
 					cursorLElem.addClass('cursor');
 				});
+			};
+			//function to close the suggestion popup
+			var closeSuggestMenu=function(menuBtn,doClose){
+				//if the suggestion menu IS active
+				if(menuBtn.hasClass('active')){
+					var closeWhileOpen=false;
+					//if only close when conditions are right
+					if(doClose==undefined){
+						doClose=false;
+						//if doesn't currently have focus
+						if(!menuBtn.hasClass('focus')){doClose=true;}
+					}
+					else{
+						//if close, no matter what
+						if(doClose){
+							//close the menu, even while the button has focus
+							closeWhileOpen=true;
+						}
+					}
+					//if should close the menu
+					if(doClose||closeWhileOpen){
+						//give the fade css transition time to play
+						setTimeout(function(){
+							//if still doesn't have focus
+							if(!menuBtn.hasClass('focus')||closeWhileOpen){
+								menuBtn.removeClass('active');
+							}
+						},200);
+					}
+				}
+			};
+			//function to show the suggestion popup
+			var openSuggestMenu=function(menuBtn,doOpen){
+				//if the suggestion menu is NOT already active
+				if(!menuBtn.hasClass('active')){
+					//if the menu button has focus
+					if(menuBtn.hasClass('focus')){
+						//if there is a <suggest> menu inside this button
+						if(menuBtn.children('suggest:last').length>0){
+							//check to see if conditions are good to open menu?
+							if(doOpen==undefined){
+								doOpen=false;
+								//if there is empty text in this field
+								if(menuBtn.find('txt l:first').not('.blank').length<1){
+									doOpen=true;
+								}
+							}
+							//if conditions are good to open menu
+							if(doOpen){
+								//show the suggestions after a delay (so the css transition works)
+								setTimeout(function(){
+									//if button still has focus
+									if(menuBtn.hasClass('focus')){
+										//show the suggest menu
+										menuBtn.addClass('active');
+									}
+								},100);
+							}
+						}
+					}
+				}
+			};
+			//build the <suggest> menu html, if not already built
+			var initSuggestMenu=function(menuBtn){
+				//if the suggest menu hasn't been created yet
+				var suggestWrap=menuBtn.children('suggest:first');
+				if(suggestWrap.length<1){
+					//get the <n>ame of the parent node
+					var parentName='//';
+					var parentNameElem=menuBtn.parents('[n]:first');
+					//if the root is NOT the parent
+					if(parentNameElem.length>0){
+						//get the parent name
+						parentName=parentNameElem.attr('n');
+					}
+					//if there is data for this parent node name
+					var parentJson=getSuggestData({'path':[parentName]});
+					if(parentJson!=undefined){
+						//get suggested attr keys
+						var getAttrKeysJson=function(){
+							var items=[];
+							//if there are any suggested attributes
+							var attrJson=getSuggestData({'root':parentJson,'path':['attr']});
+							if(attrJson!=undefined){
+								//for each suggested attribute
+								for (var attrName in attrJson){
+									//if key is an actual property of an object, (not from the prototype)
+									if (attrJson.hasOwnProperty(attrName)){
+										items.push(attrName); //add this to items
+									}
+								}
+							}
+							return items;
+						};
+						//get suggested attr values
+						var getAttrValsJson=function(){
+							var items=[];
+							//if there are any suggested attributes
+							var attrJson=getSuggestData({'root':parentJson,'path':['attr']});
+							if(attrJson!=undefined){
+								//***
+							}
+							return items;
+						};
+						//get suggested child names
+						var getChildNamesJson=function(){
+							var items=[];
+							//if there are any suggested attributes
+							var childJson=getSuggestData({'root':parentJson,'path':['child']});
+							if(childJson!=undefined){
+								//***
+							}
+							return items;
+						};
+						//get the suggested data, depending on the menuBtn type
+						var suggestItems=[];
+						var menuBtnTag=menuBtn[0].tagName.toLowerCase();
+						switch(menuBtnTag){
+							case 'x': //new item button
+								//if new attribute button
+								var parentTag=menuBtn.parent()[0].tagName.toLowerCase();
+								if(parentTag=='e'){
+									//get a list of suggested attribute keys, if any
+									suggestItems=getAttrKeysJson();
+								}else{
+									//new element button...
+
+									//get a list of suggested child names, if any
+									suggestItems=getChildNamesJson();
+								}
+								break;
+							case 'n': //element <n>ame button
+								//get a list of suggested child names, if any
+								suggestItems=getChildNamesJson();
+								break;
+							case 'k': //attribute <k>ey button
+								//get a list of suggested attribute keys, if any
+								suggestItems=getAttrKeysJson();
+								break;
+							case 'v': //attribute <v>alue button
+								//get a list of suggested attribute values, if any
+								suggestItems=getAttrValsJson();
+								break;
+						}
+						//if there are any suggested menu items
+						if(suggestItems.length>0){
+							//create the suggestions wrapper (since it doesn't already exist)
+							menuBtn.append('<suggest></suggest>');
+							suggestWrap=menuBtn.children('suggest:first');
+							//for each suggested item
+							var itemIndex=0;
+							for(var s=0;s<suggestItems.length;s++){
+								var selClass='';
+								//if first item, then select it by default
+								if(itemIndex==0){selClass=' class="sel"';}
+								//append the item html
+								suggestWrap.append('<it'+selClass+'>'+suggestItems[s]+'</it>');
+								//next item index
+								itemIndex++;
+							}
+							//attach the events to the suggestion wrapper
+							var itElems=suggestWrap.children('it').not('evs');
+							itElems.addClass('evs');
+							//click on suggested item element
+							itElems.children('it').click(function(){
+								//***
+							});
+						}
+					}
+				}
 			};
 			//set the selected text in the hidden <input> element so that Ctl+C will copy the selected
 			var inputSelectedTxt=function(txtElem){
@@ -1103,7 +1275,7 @@ function updateCode(){
 								}
 							}else{
 								//no letter should be selected
-								txtElem.children('.sel').removeClass('sel'); 
+								txtElem.children('.sel').removeClass('sel');
 								//if the ctl key is being held
 								if(isCtlKeyHeld(e)){
 									//move to the left btn (like shift+tab)
@@ -1126,6 +1298,7 @@ function updateCode(){
 							focusTxtElem=prevBtn.children('txt:first');
 						}
 					}
+					closeSuggestMenu(btn,true);
 				};
 				var cursorRight=function(){
 					var focusTxtElem=txtElem;
@@ -1209,6 +1382,7 @@ function updateCode(){
 					}
 					//align the hidden <input> val with the selected letters (if any selected)
 					inputSelectedTxt(focusTxtElem);
+					closeSuggestMenu(btn,true);
 				};
 				//==DO SOMETHING DEPENDING ON THE KEY CODE(S)==
 				//depending on the key downed
@@ -1237,6 +1411,7 @@ function updateCode(){
 					case 27: //escape key
 						e.preventDefault();
 						//***
+						closeSuggestMenu(btn,true);
 						break;
 					case 9: //tab key
 						e.preventDefault();
@@ -1278,49 +1453,71 @@ function updateCode(){
 						}else{
 							//some special IS being held...
 
-							//if ctl OR apple command key is being held
-							if(isCtlKeyHeld(e)){
-								//depending on which key was pressed WITH the ctl key
-								switch(e.keyCode){
-									case 65: //Ctl+A (select all)
-										e.preventDefault();
-										selectAllTxt(txtElem);
-										break;
-									case 67: //Ctl+C (copy selected)
-										//native functionality (copy from hidden <input> value)
-										txtElem.addClass('copy');
-										setTimeout(function(){txtElem.removeClass('copy');},100);
-										break;
-									case 86: //Ctl+V (paste)
-										//native functionality (copy from hidden <input> value)
-										//before keyup... delete selected letters, if any
-										deleteSelectedLetters();
-										//allow keyup
-										ignoreKeyup=false;
-										break;
-									case 88: //Ctl+X (cut)
-										//native functionality (copy from hidden <input> value)
-										//delete selected letters, if any
-										deleteSelectedLetters();
-										break;
-									case 90: //Ctl+Z (undo)
-										e.preventDefault();
-										//***
-										break;
-									case 89: //Ctl+Y (redo)
-										e.preventDefault();
-										//***
-										break;
+							//if space bar pressed
+							if(e.keyCode==32){
+								e.preventDefault();
+								//suggest menu isn't already open
+								if(btn.hasClass('active')){
+									//close suggest menu
+									closeSuggestMenu(btn,true);
+								}else{
+									//open suggest menu
+									openSuggestMenu(btn,true);
 								}
 							}else{
-								//a special key OTHER THAN ctl/command is pressed...
+								//space bar NOT pressed...
 
-								//if SHIFT is being pressed
-								if(e.shiftKey!=undefined&&e.shiftKey){
-									//before keyup... delete selected letters, if any
-									deleteSelectedLetters();
-									//allow keyup (capital letters)
-									ignoreKeyup=false;
+								//if ctl OR apple command key is being held
+								if(isCtlKeyHeld(e)){
+									//depending on which key was pressed WITH the ctl key
+									switch(e.keyCode){
+										case 65: //Ctl+A (select all)
+											e.preventDefault();
+											selectAllTxt(txtElem);
+											openSuggestMenu(btn,true);
+											break;
+										case 67: //Ctl+C (copy selected)
+											//native functionality (copy from hidden <input> value)
+											txtElem.addClass('copy');
+											//close suggest menu
+											closeSuggestMenu(btn,true);
+											setTimeout(function(){txtElem.removeClass('copy');},100);
+											break;
+										case 86: //Ctl+V (paste)
+											//native functionality (copy from hidden <input> value)
+											//before keyup... delete selected letters, if any
+											deleteSelectedLetters();
+											//allow keyup
+											ignoreKeyup=false;
+											break;
+										case 88: //Ctl+X (cut)
+											//native functionality (copy from hidden <input> value)
+											//delete selected letters, if any
+											deleteSelectedLetters();
+											//close suggest menu
+											closeSuggestMenu(btn,true);
+											break;
+										case 90: //Ctl+Z (undo)
+											e.preventDefault();
+											//***
+											break;
+										case 89: //Ctl+Y (redo)
+											e.preventDefault();
+											//***
+											break;
+									}
+								}else{
+									//a special key OTHER THAN ctl/command is pressed...
+
+									//if SHIFT is being pressed
+									if(e.shiftKey!=undefined&&e.shiftKey){
+										//before keyup... delete selected letters, if any
+										deleteSelectedLetters();
+										//close suggest menu
+										closeSuggestMenu(btn,true);
+										//allow keyup (capital letters)
+										ignoreKeyup=false;
+									}
 								}
 							}
 						}
@@ -1434,6 +1631,10 @@ function updateCode(){
 							//add the dynamic events to the new <l>etter elements
 							evsLetters(txtElem);
 						}
+						//build the <suggest> menu for this button, if there is data AND the <suggest> html isn't already built
+						initSuggestMenu(btn);
+						//open the suggestion menu popup, if conditions are right
+						openSuggestMenu(btn);
 					}
 				};
 				//if NOT an <x> btn element
@@ -1450,6 +1651,8 @@ function updateCode(){
 						//select all of the text in <txt>, if <txt> element exists
 						var txtElem=btn.children('txt:first');
 						selectAllTxt(txtElem);
+						//open the suggestion menu popup
+						openSuggestMenu(btn,true);
 						//remove double click class now instead of waiting for timer
 						btn.removeClass('dbl-click');
 					}
@@ -1489,61 +1692,6 @@ function updateCode(){
 						}txtElem.html('');
 						//finish setting the cursor focus for this empty <txt> element
 						setBtnFocus();
-						//get the full code completion json
-						var ccJson=code_completion();
-						//get the parent's name for this <x> element
-						var parentName='//';
-						var parentNameElem=btn.parents('[n]:first');
-						//if the root is NOT the parent
-						if(parentNameElem.length>0){
-							//get the parent name
-							parentName=parentNameElem.attr('n');
-						}
-						//if this parent is specified in code_completion data
-						if(ccJson.hasOwnProperty(parentName)){
-							var json=ccJson[parentName];
-							//if attribute
-							if(xType=='e'){
-								//if any attribute suggestions are available
-								if(json.hasOwnProperty('attr')){
-									//create the suggestion popup if it doesn't already exist
-									var suggestWrap=btn.children('suggest:first');
-									if(suggestWrap.length<1){
-										//create the suggestions wrapper
-										btn.append('<suggest></suggest>');
-										suggestWrap=btn.children('suggest:first');
-										var attrIndex=0;
-										//for each suggested attribute
-										for (var attrName in json.attr){
-											//if key is an actual property of an object, (not from the prototype)
-											if (json.attr.hasOwnProperty(attrName)){
-												var selClass='';
-												if(attrIndex==0){selClass=' class="sel"';}
-												suggestWrap.append('<it'+selClass+'>'+attrName+'</it>');
-												attrIndex++;
-											}
-										}
-										//set the events for the suggestion popup (should go away in the clearFocus method)
-										//***
-									}
-									//show the suggestions after a delay (so the css transition works)
-									setTimeout(function(){
-										//if button still has focus
-										if(btn.hasClass('focus')){
-											//show the suggest menu
-											btn.addClass('active');
-										}
-									},100);
-								}
-							}else{
-								//node...
-
-								//if any node suggestions are available
-								if(json.hasOwnProperty('child')){
-									//***
-								}
-							}
-						}
 					}
 				}
 			});
