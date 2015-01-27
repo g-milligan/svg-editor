@@ -1399,8 +1399,22 @@ function updateCode(){
 						break;
 					case 13: //enter key
 						e.preventDefault();
-						//enter value and remove focus from this btn
-						clearFocus();
+						//if a special key is NOT held now
+						if(!isSpecialKeyHeld(e)){
+							//enter value and remove focus from this btn
+							clearFocus();
+						}else{
+							//special key IS being held...
+
+							//suggest menu isn't already open
+							if(btn.hasClass('active')){
+								//close suggest menu
+								closeSuggestMenu(btn,true);
+							}else{
+								//open suggest menu
+								openSuggestMenu(btn,true);
+							}
+						}
 						break;
 					case 91: //apple command key
 						e.preventDefault();
