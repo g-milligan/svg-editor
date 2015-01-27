@@ -1103,7 +1103,7 @@ function updateCode(){
 								}
 							}else{
 								//no letter should be selected
-								txtElem.children('.sel').removeClass('sel');
+								txtElem.children('.sel').removeClass('sel'); 
 								//if the ctl key is being held
 								if(isCtlKeyHeld(e)){
 									//move to the left btn (like shift+tab)
@@ -1115,6 +1115,16 @@ function updateCode(){
 						}
 						//align the hidden <input> val with the selected letters (if any selected)
 						inputSelectedTxt(focusTxtElem);
+					}else{
+						//already at the left of the first letter...
+
+						//if the ctl key is being held
+						if(isCtlKeyHeld(e)){
+							//move to the left btn (like shift+tab)
+							var prevBtn=skipLeft();
+							//get the new <txt> element that has focus
+							focusTxtElem=prevBtn.children('txt:first');
+						}
 					}
 				};
 				var cursorRight=function(){
@@ -1138,10 +1148,20 @@ function updateCode(){
 							txtElem.children('.sel').removeClass('sel');
 							//if the ctl key is being held
 							if(isCtlKeyHeld(e)){
-								//move the cursor to the right of th last letter
-								var lastLElem=txtElem.children('l:last');
-								txtElem.children('l.cursor').not(lastLElem).removeClass('cursor');
-								lastLElem.addClass('cursor');
+								//if there is only one empty letter in this field
+								if(txtElem.children('l').length<2){
+									//move to the right button (like tab)
+									var nextBtn=skipRight();
+									//get the new <txt> element that has focus
+									focusTxtElem=nextBtn.children('txt:first');
+								}else{
+									//more than just one empty letter in this field...
+
+									//move the cursor to the right of the last letter
+									var lastLElem=txtElem.children('l:last');
+									txtElem.children('l.cursor').not(lastLElem).removeClass('cursor');
+									lastLElem.addClass('cursor');
+								}
 							}
 						}
 					}else{
