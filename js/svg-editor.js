@@ -630,107 +630,200 @@ function updateCode(){
 				//if the suggest menu hasn't been created yet
 				var suggestWrap=menuBtn.children('suggest:first');
 				if(suggestWrap.length<1){
-					//get the <n>ame of the parent node
-					var parentName='//';
-					var parentNameElem=menuBtn.parents('[n]:first');
-					//if the root is NOT the parent
-					if(parentNameElem.length>0){
-						//get the parent name
-						parentName=parentNameElem.attr('n');
-					}
-					//if there is data for this parent node name
-					var parentJson=getSuggestData({'path':[parentName]});
-					if(parentJson!=undefined){
-						//get suggested attr keys
-						var getAttrKeysJson=function(){
-							var items=[];
-							//if there are any suggested attributes
-							var attrJson=getSuggestData({'root':parentJson,'path':['attr']});
-							if(attrJson!=undefined){
-								//for each suggested attribute
-								for (var attrName in attrJson){
-									//if key is an actual property of an object, (not from the prototype)
-									if (attrJson.hasOwnProperty(attrName)){
-										items.push(attrName); //add this to items
+					//get the name of the parent for the given elem
+					var getParentName=function(elem){
+						var ret='//';
+						var parentNameElem=elem.parents('[n]:first');
+						//if the root is NOT the parent
+						if(parentNameElem.length>0){
+							//get the parent name
+							ret=parentNameElem.attr('n');
+						}
+						return ret;
+					};
+					var defaultVal;
+					//get suggested attr keys
+					var getAttrKeysJson=function(){
+						var items=[];
+						//if there are any suggested attributes
+						var parentName=getParentName(menuBtn);
+						var attrJson=getSuggestData({'path':[parentName,'attr']});
+						if(attrJson!=undefined){
+							//for each suggested attribute
+							for (var attrName in attrJson){
+								//if key is an actual property of an object, (not from the prototype)
+								if (attrJson.hasOwnProperty(attrName)){
+									//if first attribute, then set as default
+									if(defaultVal==undefined){defaultVal=attrName;}
+									//add this to items
+									items.push({'val':attrName,'txt':attrName});
+								}
+							}
+						}
+						return items;
+					};
+					//get suggested attr values
+					var getAttrValsJson=function(){
+						var items=[];
+						//if there are any suggested attribute values for this attribute key
+						var kElem=menuBtn.parent().children('k:first');
+						var kTxtElem=kElem.children('txt:first');
+						var kTxt=kTxtElem.html();
+						var parentName=getParentName(menuBtn);
+						var valsArray=getSuggestData({'path':[parentName,'attr',kTxt,'vals']});
+						if(valsArray!=undefined){
+							if(valsArray.length>0){
+								var defaultStr=getSuggestData({'path':[parentName,'attr',kTxt,'default']});
+								//for each suggested value
+								for(var v=0;v<valsArray.length;v++){
+									var val=valsArray[v];
+									//if first attribute, then set as default... by default :P
+									if(defaultVal==undefined){defaultVal=val;}
+									//is marked as default suggested value?
+									var isDefault=false;
+									if(defaultStr!=undefined){
+										if(val==defaultStr){defaultVal=val;}
+									}
+									//add this to items
+									items.push({'val':val,'txt':val});
+								}
+							}
+						}
+						return items;
+					};
+					//get suggested child names
+					var getChildNamesJson=function(parentName){
+						var items=[];
+						//if there are any suggested attributes
+						var childJson=getSuggestData({'path':[parentName,'child']});
+						if(childJson!=undefined){
+							//for each suggested child
+							for (var childKey in childJson){
+								//if key is an actual property of an object, (not from the prototype)
+								if (childJson.hasOwnProperty(childKey)){
+									//function to only return true for BOOLEAN true values
+									var isTrue=function(){
+										var ret=false;
+										if(childJson[childKey]!=undefined){
+											if(typeof childJson[childKey]=='boolean'){
+												if(childJson[childKey]){ret=true;}
+											}
+										}return ret;
+									};
+									//depending on the child key
+									switch(childKey){
+										case 'cdata':
+											//if cdata is allowed in suggestions
+											if(isTrue()){
+												items.push({'class':'cdata','start':'&lt;![CDATA[','end':']]&gt;','txt':'&lt;![CDATA[ ... ]]&gt;'}); //add this to items
+											}
+											break;
+										case 'comment':
+											//if comment is allowed in suggestions
+											if(isTrue()){
+												items.push({'class':'comment','start':'&lt;!--','end':'--&gt;','txt':'&lt;!-- ... --&gt;'}); //add this to items
+											}
+											break;
+										case 'text':
+											//if text is allowed in suggestions
+											if(isTrue()){
+												items.push({'class':'text','txt':'text'}); //add this to items
+											}
+											break;
+										case 'elem':
+											//***
+											break;
 									}
 								}
 							}
-							return items;
-						};
-						//get suggested attr values
-						var getAttrValsJson=function(){
-							var items=[];
-							//if there are any suggested attributes
-							var attrJson=getSuggestData({'root':parentJson,'path':['attr']});
-							if(attrJson!=undefined){
-								//***
-							}
-							return items;
-						};
-						//get suggested child names
-						var getChildNamesJson=function(){
-							var items=[];
-							//if there are any suggested attributes
-							var childJson=getSuggestData({'root':parentJson,'path':['child']});
-							if(childJson!=undefined){
-								//***
-							}
-							return items;
-						};
-						//get the suggested data, depending on the menuBtn type
-						var suggestItems=[];
-						var menuBtnTag=menuBtn[0].tagName.toLowerCase();
-						switch(menuBtnTag){
-							case 'x': //new item button
-								//if new attribute button
-								var parentTag=menuBtn.parent()[0].tagName.toLowerCase();
-								if(parentTag=='e'){
-									//get a list of suggested attribute keys, if any
-									suggestItems=getAttrKeysJson();
-								}else{
-									//new element button...
-
-									//get a list of suggested child names, if any
-									suggestItems=getChildNamesJson();
-								}
-								break;
-							case 'n': //element <n>ame button
-								//get a list of suggested child names, if any
-								suggestItems=getChildNamesJson();
-								break;
-							case 'k': //attribute <k>ey button
+						}
+						return items;
+					};
+					//get the suggested data, depending on the menuBtn type
+					var suggestItems=[];
+					var menuBtnTag=menuBtn[0].tagName.toLowerCase();
+					switch(menuBtnTag){
+						case 'x': //new item button
+							//if new attribute button
+							var parentTag=menuBtn.parent()[0].tagName.toLowerCase();
+							if(parentTag=='e'){
 								//get a list of suggested attribute keys, if any
 								suggestItems=getAttrKeysJson();
-								break;
-							case 'v': //attribute <v>alue button
-								//get a list of suggested attribute values, if any
-								suggestItems=getAttrValsJson();
-								break;
-						}
-						//if there are any suggested menu items
-						if(suggestItems.length>0){
-							//create the suggestions wrapper (since it doesn't already exist)
-							menuBtn.append('<suggest></suggest>');
-							suggestWrap=menuBtn.children('suggest:first');
-							//for each suggested item
-							var itemIndex=0;
-							for(var s=0;s<suggestItems.length;s++){
-								var selClass='';
-								//if first item, then select it by default
-								if(itemIndex==0){selClass=' class="sel"';}
-								//append the item html
-								suggestWrap.append('<it'+selClass+'>'+suggestItems[s]+'</it>');
-								//next item index
-								itemIndex++;
+							}else{
+								//new element button...
+								var parentName=getParentName(menuBtn);
+								//get a list of suggested child names, if any
+								suggestItems=getChildNamesJson(parentName);
 							}
-							//attach the events to the suggestion wrapper
-							var itElems=suggestWrap.children('it').not('evs');
-							itElems.addClass('evs');
-							//click on suggested item element
-							itElems.children('it').click(function(){
-								//***
-							});
+							break;
+						case 'n': //element <n>ame button
+							var parentName='//';
+							var superParentElem=menuBtn.parents('g:first').parents('[n]:first');
+							if(superParentElem.length>0){
+								parentName=superParentElem.attr('n');
+							}
+							//get a list of suggested child names, if any
+							suggestItems=getChildNamesJson(parentName);
+							break;
+						case 'k': //attribute <k>ey button
+							//get a list of suggested attribute keys, if any
+							suggestItems=getAttrKeysJson();
+							break;
+						case 'v': //attribute <v>alue button
+							//get a list of suggested attribute values, if any
+							suggestItems=getAttrValsJson();
+							break;
+					}
+					//if there are any suggested menu items
+					if(suggestItems.length>0){
+						//create the suggestions wrapper (since it doesn't already exist)
+						menuBtn.append('<suggest></suggest>');
+						suggestWrap=menuBtn.children('suggest:first');
+						//for each suggested item
+						var itemIndex=0;
+						for(var s=0;s<suggestItems.length;s++){
+							var sugJson=suggestItems[s];
+							//val attribute
+							var valStr;var valAttr='';if(sugJson.hasOwnProperty('val')){valAttr=' val="'+sugJson.val+'"';valStr=sugJson.val;}
+							//start attribute
+							var startAttr='';if(sugJson.hasOwnProperty('start')){startAttr=' start="'+sugJson.start+'"';}
+							//end attribute
+							var endAttr='';if(sugJson.hasOwnProperty('end')){endAttr=' end="'+sugJson.end+'"';}
+							//class
+							var classStr='';if(sugJson.hasOwnProperty('class')){classStr=' '+sugJson.class;}
+							var nameAttr='';
+							if(classStr.length>0){
+								nameAttr=' name="'+classStr.trim()+'"';
+							}
+							//is default selected on init?
+							var isDefaultSug=false;
+							//if there is NO default value
+							if(defaultVal==undefined){
+								//select the first, by default
+								if(itemIndex==0){isDefaultSug=true;}
+							}else{
+								//there is a default value...
+
+								//so if THIS is the default value
+								if(valStr==defaultVal){isDefaultSug=true;}
+							}
+							//if this item should be the default selected item on init
+							var selClass=''; var defaultClass='';
+							if(isDefaultSug){
+								selClass=' sel';defaultClass=' default';
+							}
+							//append the item html
+							suggestWrap.append('<it class="i'+defaultClass+selClass+classStr+'"'+valAttr+startAttr+endAttr+nameAttr+'>'+sugJson.txt+'</it>');
+							//next item index
+							itemIndex++;
 						}
+						//attach the events to the suggestion wrapper
+						var itElems=suggestWrap.children('it').not('evs');
+						itElems.addClass('evs');
+						//click on suggested item element
+						itElems.children('it').click(function(){
+							//***
+						});
 					}
 				}
 			};

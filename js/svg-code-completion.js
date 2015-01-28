@@ -4,7 +4,7 @@ function code_completion(){
     '//':{
       //child node suggestions
       'child':{
-        'cdata':true,'comment':true,'text':true,
+        'cdata':false,'comment':true,'text':false,
         'elem':[
           {'tag':'svg'}
         ]
