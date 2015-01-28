@@ -4,6 +4,7 @@ function code_completion(){
     '//':{
       //child node suggestions
       'child':{
+        'default':'svg',
         'cdata':false,'comment':true,'text':false,
         'elem':[
           {'tag':'svg'}
@@ -30,6 +31,7 @@ function code_completion(){
       },
       //child node suggestions
       'child':{
+        'default':'path',
         'cdata':true,'comment':true,'text':true,
         'elem':[
           {'tag':'circle'},

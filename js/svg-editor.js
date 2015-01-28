@@ -712,26 +712,38 @@ function updateCode(){
 									};
 									//depending on the child key
 									switch(childKey){
+										case 'default': //default selected element name
+											defaultVal=childJson[childKey];
+											break;
 										case 'cdata':
 											//if cdata is allowed in suggestions
 											if(isTrue()){
-												items.push({'class':'cdata','start':'&lt;![CDATA[','end':']]&gt;','txt':'&lt;![CDATA[ ... ]]&gt;'}); //add this to items
+												items.push({'val':'cdata','class':'cdata','start':'&lt;![CDATA[','end':']]&gt;','txt':'&lt;![CDATA[ ... ]]&gt;'}); //add this to items
 											}
 											break;
 										case 'comment':
 											//if comment is allowed in suggestions
 											if(isTrue()){
-												items.push({'class':'comment','start':'&lt;!--','end':'--&gt;','txt':'&lt;!-- ... --&gt;'}); //add this to items
+												items.push({'val':'comment','class':'comment','start':'&lt;!--','end':'--&gt;','txt':'&lt;!-- ... --&gt;'}); //add this to items
 											}
 											break;
 										case 'text':
 											//if text is allowed in suggestions
 											if(isTrue()){
-												items.push({'class':'text','txt':'text'}); //add this to items
+												items.push({'val':'text','class':'text','txt':'text'}); //add this to items
 											}
 											break;
 										case 'elem':
-											//***
+											//for each element
+											var elems=childJson[childKey];
+											for(var e=0;e<elems.length;e++){
+												var elemJson=elems[e];
+												//add this to items
+												items.push({
+													'start':'&lt;'+elemJson.tag+'&gt;','end':'&lt;/'+elemJson.tag+'&gt;',
+													'class':elemJson.tag,'val':elemJson.tag,'txt':'&lt;'+elemJson.tag+'&gt;'
+												});
+											}
 											break;
 									}
 								}
@@ -790,10 +802,11 @@ function updateCode(){
 							//end attribute
 							var endAttr='';if(sugJson.hasOwnProperty('end')){endAttr=' end="'+sugJson.end+'"';}
 							//class
-							var classStr='';if(sugJson.hasOwnProperty('class')){classStr=' '+sugJson.class;}
+							var classStr='';if(sugJson.hasOwnProperty('class')){classStr=sugJson.class;}
 							var nameAttr='';
 							if(classStr.length>0){
-								nameAttr=' name="'+classStr.trim()+'"';
+								nameAttr=' name="'+classStr+'"';
+								classStr=' c_'+classStr;
 							}
 							//is default selected on init?
 							var isDefaultSug=false;
