@@ -594,6 +594,38 @@ function updateCode(){
 					}
 				}
 			};
+			//set the suggested item's text (if any) and clear focus
+			var setSuggestItem=function(menuBtn){
+				var didSet=false;
+				//if <suggest> menu is open
+				if(menuBtn.hasClass('active')){
+					//if there is a <suggest> element
+					var sugWrap=menuBtn.children('suggest:last');
+					if(sugWrap.length>0){
+						//*** clearFocus();
+						didSet=true;
+					}
+				}
+				return didSet;
+			};
+			//handle selecting an <it>em from the <suggest> menu
+			var selectSuggestItem=function(sugWrap,itElem,doSet){
+				//if there is a <suggest> wrapper
+				if(sugWrap!=undefined&&sugWrap.length>0){
+					if(doSet==undefined){doSet=false;}
+					//deselect all of the <it>ems under <suggest>
+					sugWrap.children('it.sel').removeClass('sel');
+					//if the new <it> element exists
+					if(itElem!=undefined){
+						if(itElem.length>0){
+							//add the select class to <it>
+							itElem.addClass('sel');
+						}
+					}
+					//if the suggested text should be set
+					if(doSet){setSuggestItem(sugWrap.parent());}
+				}
+			};
 			//function to show the suggestion popup
 			var openSuggestMenu=function(menuBtn,doOpen){
 				//if the suggestion menu is NOT already active
@@ -834,8 +866,8 @@ function updateCode(){
 						var itElems=suggestWrap.children('it').not('evs');
 						itElems.addClass('evs');
 						//click on suggested item element
-						itElems.children('it').click(function(){
-							//***
+						itElems.click(function(){
+							selectSuggestItem(suggestWrap,jQuery(this),true);
 						});
 					}
 				}
@@ -1490,6 +1522,56 @@ function updateCode(){
 					inputSelectedTxt(focusTxtElem);
 					closeSuggestMenu(btn,true);
 				};
+				//handle arrow up/down
+				var arrowUpDown=function(upOrDown){
+					//if the <suggest> menu is NOT open
+					if(!btn.hasClass('active')){
+						//***
+					}else{
+						//the <suggest> menu IS open...
+
+						//if there is a <suggest> menu
+						var sugWrap=btn.children('suggest:first');
+						if(sugWrap.length>0){
+							//if there are ANY <it>ems under <suggest> menus
+							if(sugWrap.children('it').length>0){
+								//get the selected <it>, if any
+								var selIt=sugWrap.children('it.sel:first');
+								//if NO item is selected now
+								if(selIt.length<1){
+									//depending on arrow up/down...
+									switch(upOrDown){
+										case 'down': selIt=sugWrap.children('it:first'); break; //get the FIRST <it>em by default
+										case 'up': selIt=sugWrap.children('it:last'); break; //get the LAST <it>em by default
+									}
+								}
+								//if there is any <it>em in the <suggest> menu
+								if(selIt.length>0){
+									//if the <it>em is already selected (move to the next item)
+									if(selIt.hasClass('sel')){
+										var newIt;
+										//depending on arrow up/down...
+										switch(upOrDown){
+											case 'down': newIt=selIt.next('it:first'); break; //get the FIRST <it>em by default
+											case 'up': newIt=selIt.prev('it:first'); break; //get the LAST <it>em by default
+										}
+										//select the next/prev item
+										selectSuggestItem(sugWrap,newIt);
+									}else{
+										//<it>em NOT already selected because no item was selected...
+
+										//select the <it>em (either first or last item)
+										selectSuggestItem(sugWrap,selIt);
+									}
+								}
+							}
+						}
+					}
+				};
+				//handle arrow up
+				var arrowUp=function(){arrowUpDown('up');};
+				//handle arrow down
+				var arrowDown=function(){arrowUpDown('down');};
 				//==DO SOMETHING DEPENDING ON THE KEY CODE(S)==
 				//depending on the key downed
 				switch(e.keyCode){
@@ -1507,8 +1589,11 @@ function updateCode(){
 						e.preventDefault();
 						//if a special key is NOT held now
 						if(!isSpecialKeyHeld(e)){
-							//enter value and remove focus from this btn
-							clearFocus();
+							//if the <suggest> menu wasn't open
+							if(!setSuggestItem(btn)){
+								//enter value and remove focus from this btn
+								clearFocus();
+							}
 						}else{
 							//special key IS being held...
 
@@ -1553,7 +1638,7 @@ function updateCode(){
 						break;
 					case 38: //up arrow
 						e.preventDefault();
-						//***
+						arrowUp();
 						break;
 					case 39: //right arrow
 						e.preventDefault();
@@ -1561,7 +1646,7 @@ function updateCode(){
 						break;
 					case 40: //down arrow
 						e.preventDefault();
-						//***
+						arrowDown();
 						break;
 					default:
 						//if NOT holding a special key, like ctl, command, shift, alt...

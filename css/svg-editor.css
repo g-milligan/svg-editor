@@ -10,7 +10,7 @@
 
 #code txt l.cursor:after,#code txt l{display:inline-block;font-weight:bold;font-size:100%;}
 #code txt l{font-weight:normal;position:relative;}
-#code txt l.sel{background-color:rgba(0,100,255,1);color:#fff;}
+#code txt l.sel{background-color:rgba(0,120,255,1);color:#fff;}
 #code txt.copy l.sel{background-color:rgba(0,255,100,1);color:#1a1aa6;}
 #code txt l.cursor:after,#code txt l.cursor.before:before{background-color:#881280;color:#881280;position:absolute;height:100%;width:3px;right:-1px;top:0;margin:auto;display:inline-block;content:"";-webkit-animation:.6s blink step-end infinite;-moz-animation:.6s blink step-end infinite;-ms-animation:.6s blink step-end infinite;-o-animation:.6s blink step-end infinite;animation:.6s blink step-end infinite;}
 #code txt l.cursor.sel:after,#code txt l.cursor.sel.before:before{background-color:#FFFC00;color:#FFFC00;}
@@ -27,7 +27,7 @@
 #code .active.focus suggest{opacity:1;}
 #code suggest it{display:block;padding:.1em .5em;font-size:97%;color:#000;white-space:nowrap;cursor:pointer;}
 #code suggest it:hover{background-color:#F2F2F2;}
-#code suggest it.sel{background-color:rgba(0,50,150,.1);}
+#code suggest it.sel{background-color:rgba(0,100,255,1);color:#fff;}
 #code g.closed > x{display:none;}
 #code e > x.last{width:0;}
 #code g.empty > x,#code g.closed > x.first,#code e > x,#code e:hover > x.last{display:inline-block;width:1.4em;height:1em;vertical-align:middle;}
