@@ -214,30 +214,92 @@ function updateCode(){
 					}
 				});
 			});
+			//return true if the json node doesn't have either "on:0" OR "on:false"
+			var suggestDataIsOn=function(onJson){
+				var isOn=true;
+				if(onJson.hasOwnProperty('on')){
+					switch(onJson.on){
+						case 0:isOn=false;break;
+						default:
+							if(typeof onJson.on=='boolean'){
+								isOn=onJson.on;
+							}
+							break;
+					}
+				}return isOn;
+			};
 			//function to get data from the code completion data
 			var getSuggestData=function(args){
 				var retData;
 				//get the params from args
 				var ccJson;
 				var pathArray=args.path;
+				//if a root property was specified, then try to get the value
 				if(args.hasOwnProperty('root')){ccJson=args.root;}
-				if(ccJson==undefined){ccJson=code_completion();}
-				//for each item passed in pathArray
-				var json=ccJson;
-				for(var i=0;i<pathArray.length;i++){
-					//if this next key exists in the json
-					var key=pathArray[i];
-					if(json.hasOwnProperty(key)){
-						//get the data at this key
-						json=json[key];
-					}else{
-						//the path wasn't fully completed, end the loop and return undefined
-						json=undefined;
-						break;
+				else{ccJson=code_completion();} //no root specified, just get the whole json
+				//if the root json is defined
+				if(ccJson!=undefined){
+					//for each item passed in pathArray
+					var json=ccJson;
+					for(var i=0;i<pathArray.length;i++){
+						//if this next key exists in the json
+						var key=pathArray[i];
+						if(json.hasOwnProperty(key)){
+							//get the data at this key
+							json=json[key];
+							//if this data is turned off
+							if(!suggestDataIsOn(json)){
+								//the data is turned off, end the loop and return undefined
+								json=undefined;
+								break;
+							}
+						}else{
+							//the path wasn't fully completed, end the loop and return undefined
+							json=undefined;
+							break;
+						}
+					}
+					retData=json;
+				}
+				return retData;
+			};
+			//gets a list of suggested items in a format that's easier to manipulate
+			var getSuggestItems=function(typeJson){
+				//if this json object has a list property
+				var retJson={'ids':[],'item':{}};
+				if(typeJson.hasOwnProperty('list')){
+					//if this json object isn't turned off
+					if(suggestDataIsOn(typeJson)){
+						//if there is a default value
+						var defaultVal; if(typeJson.hasOwnProperty('default')){defaultVal=typeJson.default;}
+						if(defaultVal!=undefined){defaultVal=defaultVal.toLowerCase();}
+						//for each item in the list
+						for(var i=0;i<typeJson.list.length;i++){
+							//if the item has an id
+							var itemWrapJson=typeJson.list[i];
+							if(itemWrapJson.hasOwnProperty('id')){
+								//if this id hasn't already been included in the return json
+								var itemId=itemWrapJson.id; itemId=itemId.toLowerCase();
+								if(!retJson.item.hasOwnProperty(itemId)){
+									//if this item isn't turned off
+									if(suggestDataIsOn(itemWrapJson)){
+										//push the id into the array that preserves the order of ids
+										retJson.ids.push(itemId);
+										//set the item json
+										retJson.item[itemId]=itemWrapJson;
+										//if this is the default item id
+										var isDefault=false;
+										if(defaultVal!=undefined){
+											if(defaultVal==itemId){isDefault=true;}
+										}
+										retJson.item[itemId]['default_item']=isDefault;
+									}
+								}
+							}
+						}
 					}
 				}
-				retData=json;
-				return retData;
+				return retJson;
 			};
 			//==EDIT XML EVENTS==
 			var clickEditElems=rootElem.find('input').not('.evs');
@@ -301,26 +363,33 @@ function updateCode(){
 									anyChanges=true;
 									//if text was entered into an <x> element (then a new node must be created)
 									if(btnTag=='x'){
-										//reset the previous text for <x> element
-										txtElem[0].previousText=undefined;
-										//clear out the temporary text inside the <x> button
-										txtElem.html('');
-										//get the parent xml name, n=""
-										var parentElem=btn.parent();
-										//if the parent node has an n="" attribute (if there is no n attribute then treat the parent as the root, //)
-										var xmlParentName=parentElem.attr('n'); if(xmlParentName==undefined){xmlParentName='';}
-										if(xmlParentName.length<1){xmlParentName='//';}
-										//try to get the code completion json for this xmlParentName
-										var suggestJson=getSuggestData({'path':[xmlParentName]});
-										//the type of new node that will be created depends on the parent of <x>
-										var parentTag=parentElem[0].tagName.toLowerCase();
-										switch(parentTag){
-											case 'e': //create new ATTRIBUTE
-												//if the <x> attr key text NOT blank
-												if(newTxt.trim().length>0){
-													//retrieve the suggested default attribute value, if there is one
-													var attrVal=getSuggestData({'root':suggestJson,'path':['attr',newTxt,'default']});
-													if(attrVal==undefined){attrVal='';}
+										//if the new text is NOT blank (can't create a NEW item if the text is blank)
+										if(newTxt.trim().length>0){
+											//==CREATE NEW ITEM==
+											//reset the previous text for <x> element
+											txtElem[0].previousText=undefined;
+											//clear out the temporary text inside the <x> button
+											txtElem.html('');
+											//get the parent xml name, n=""
+											var parentElem=btn.parent();
+											//if the parent node has an n="" attribute (if there is no n attribute then treat the parent as the root, //)
+											var xmlParentName=parentElem.attr('n'); if(xmlParentName==undefined){xmlParentName='';}
+											if(xmlParentName.length<1){xmlParentName='//';}
+											//the type of new node that will be created depends on the parent of <x>
+											var parentTag=parentElem[0].tagName.toLowerCase();
+											switch(parentTag){
+												case 'e': //create new ATTRIBUTE
+													//get the suggest json for attributes, of this parent node name
+													var sugAttrJson=getSuggestData({'path':['node',xmlParentName,'attr']});
+													var attrsJson=getSuggestItems(sugAttrJson);
+													//try to get the default value for this attribute, if any
+													var attrVal='';
+													if(attrsJson.item.hasOwnProperty(newTxt.toLowerCase())){
+														attrJson=attrsJson.item[newTxt.toLowerCase()];
+														if(attrJson.hasOwnProperty('default')){
+															attrVal=attrJson.default;
+														}
+													}
 													//create the new xml to add
 													var xHtml='<x{pos-class}><input type="text" /></x>';
 													var attrHtml='<kv><k><space> </space><txt>'+newTxt+'</txt><input type="text" /></k>="<v><txt>'+attrVal+'</txt><input type="text" class="ignore-keyup" /></v>"</kv>';
@@ -347,12 +416,22 @@ function updateCode(){
 													newVElem.click(); //double clicked to select text, and show value suggestions
 													//if the <v> value is starting blank, with no default value
 													if(attrVal.length<1){newKvElem.addClass('blank-txt');}
-												}
-												break;
-											default: //create new ELEMENT
-												//***
-												break;
+													break;
+												default: //create new ELEMENT
+													//get the suggest json for children, of this parent node name
+													var sugChildJson=getSuggestData({'path':['node',xmlParentName,'child']});
+													var sugElemJson=getSuggestData({'root':sugChildJson,'path':['elem']});
+													var sugTextJson=getSuggestData({'root':sugChildJson,'path':['text']});
+													//***
+													var test;
+													break;
+											}
 										}
+									}else{
+										//this wasn't <x> button, this was an existing node...
+
+										//==EDIT EXISTING ITEM==
+										//***
 									}
 								}
 								//if a new item wasn't added (existing item edited)
@@ -615,6 +694,8 @@ function updateCode(){
 							//indicate that value was set
 							didSet=true;
 						}
+						//close the suggest menu
+						closeSuggestMenu(menuBtn,true);
 					}
 				}
 				return didSet;

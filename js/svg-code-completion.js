@@ -1,48 +1,61 @@
 function code_completion(){
   var json={
-    //has root parent element
-    '//':{
-      //child node suggestions
-      'child':{
-        'default':'svg',
-        'cdata':false,'comment':true,'text':false,
-        'elem':[
-          {'tag':'svg'}
-        ]
-      }
-    },
-    //has svg parent element
-    'svg':{
-      //child attribute suggestions
-      'attr':{
-        'version':{
-          'default':'1.1',
-          'vals':['1.0','1.1','2']
-        },
-        'viewBox':{
-          'default':'0 0 800 800'
-        },
-        'xmlns':{
-          'default':'http://www.w3.org/2000/svg'
-        },
-        'xmlns:xlink':{
-          'default':'http://www.w3.org/1999/xlink'
+    'node':{
+      '//':{
+        'on':1,
+        'child':{
+          'default':'elem','on':1,
+          'text':{
+            'default':'text','on':1,
+            'list':[
+              {'id':'cdata','on':0},
+              {'id':'comment','on':1},
+              {'id':'text','on':0}
+            ]
+          },
+          'elem':{
+            'default':'svg','on':1,
+            'list':[
+              {'id':'svg','on':1}
+            ]
+          }
         }
       },
-      //child node suggestions
-      'child':{
-        'default':'path',
-        'cdata':true,'comment':true,'text':true,
-        'elem':[
-          {'tag':'circle'},
-          {'tag':'ellipse'},
-          {'tag':'line'},
-          {'tag':'path'},
-          {'tag':'polygon'},
-          {'tag':'polyline'},
-          {'tag':'rect'},
-          {'tag':'text'}
-        ]
+      'svg':{
+        'on':1,
+        'attr':{
+          'default':'viewBox','on':1,
+          'list':[
+            {'id':'version','on':1,'default':'1.1','vals':['1.0','1.1','2']},
+            {'id':'viewBox','on':1,'default':'0 0 800 800'},
+            {'id':'xmlns','on':1,'default':'http://www.w3.org/2000/svg'},
+            {'id':'xmlns:xlink','on':1,'default':'http://www.w3.org/1999/xlink'}
+          ]
+        },
+        'child':{
+          'default':'elem','on':1,
+          'text':{
+            'default':'text','on':1,
+            'list':[
+              {'id':'cdata','on':1},
+              {'id':'comment','on':1},
+              {'id':'text','on':1}
+            ]
+          },
+          'elem':{
+            'default':'path','on':1,
+            'list':[
+              {'id':'circle','on':1},
+              {'id':'ellipse','on':1},
+              {'id':'line','on':1},
+              {'id':'path','on':1},
+              {'id':'polygon','on':1},
+              {'id':'polyline','on':1},
+              {'id':'rect','on':1},
+              {'id':'text','on':1}
+            ]
+          }
+        }
       }
     }
   };
