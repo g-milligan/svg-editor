@@ -602,8 +602,19 @@ function updateCode(){
 					//if there is a <suggest> element
 					var sugWrap=menuBtn.children('suggest:last');
 					if(sugWrap.length>0){
-						//*** clearFocus();
-						didSet=true;
+						//if there is a selected <it> under <suggest>
+						var selIt=sugWrap.children('it.sel:first');
+						if(selIt.length>0){
+							//if there is a value for this suggested item
+							var selVal=selIt.attr('val');
+							if(selVal==undefined){selVal='';}
+							//set the selected value
+							menuBtn.children('txt:first').text(selVal);
+							//clear the focus to enter this value
+							clearFocus();
+							//indicate that value was set
+							didSet=true;
+						}
 					}
 				}
 				return didSet;
