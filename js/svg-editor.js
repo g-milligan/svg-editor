@@ -267,32 +267,34 @@ function updateCode(){
 			var getSuggestItems=function(typeJson){
 				//if this json object has a list property
 				var retJson={'ids':[],'item':{}};
-				if(typeJson.hasOwnProperty('list')){
-					//if this json object isn't turned off
-					if(suggestDataIsOn(typeJson)){
-						//if there is a default value
-						var defaultVal; if(typeJson.hasOwnProperty('default')){defaultVal=typeJson.default;}
-						if(defaultVal!=undefined){defaultVal=defaultVal.toLowerCase();}
-						//for each item in the list
-						for(var i=0;i<typeJson.list.length;i++){
-							//if the item has an id
-							var itemWrapJson=typeJson.list[i];
-							if(itemWrapJson.hasOwnProperty('id')){
-								//if this id hasn't already been included in the return json
-								var itemId=itemWrapJson.id; itemId=itemId.toLowerCase();
-								if(!retJson.item.hasOwnProperty(itemId)){
-									//if this item isn't turned off
-									if(suggestDataIsOn(itemWrapJson)){
-										//push the id into the array that preserves the order of ids
-										retJson.ids.push(itemId);
-										//set the item json
-										retJson.item[itemId]=itemWrapJson;
-										//if this is the default item id
-										var isDefault=false;
-										if(defaultVal!=undefined){
-											if(defaultVal==itemId){isDefault=true;}
+				if(typeJson!=undefined){
+					if(typeJson.hasOwnProperty('list')){
+						//if this json object isn't turned off
+						if(suggestDataIsOn(typeJson)){
+							//if there is a default value
+							var defaultVal; if(typeJson.hasOwnProperty('default')){defaultVal=typeJson.default;}
+							if(defaultVal!=undefined){defaultVal=defaultVal.toLowerCase();}
+							//for each item in the list
+							for(var i=0;i<typeJson.list.length;i++){
+								//if the item has an id
+								var itemWrapJson=typeJson.list[i];
+								if(itemWrapJson.hasOwnProperty('id')){
+									//if this id hasn't already been included in the return json
+									var itemId=itemWrapJson.id; itemId=itemId.toLowerCase();
+									if(!retJson.item.hasOwnProperty(itemId)){
+										//if this item isn't turned off
+										if(suggestDataIsOn(itemWrapJson)){
+											//push the id into the array that preserves the order of ids
+											retJson.ids.push(itemId);
+											//set the item json
+											retJson.item[itemId]=itemWrapJson;
+											//if this is the default item id
+											var isDefault=false;
+											if(defaultVal!=undefined){
+												if(defaultVal==itemId){isDefault=true;}
+											}
+											retJson.item[itemId]['default_item']=isDefault;
 										}
-										retJson.item[itemId]['default_item']=isDefault;
 									}
 								}
 							}
@@ -300,6 +302,30 @@ function updateCode(){
 					}
 				}
 				return retJson;
+			};
+			//function to loop through each suggest item
+			var eachSuggestItem=function(itemJson,itemFunc){
+				var itemLength=0;
+				if(itemFunc!=undefined){
+					if(itemJson!=undefined){
+						if(itemJson.hasOwnProperty('ids')){
+							if(itemJson.hasOwnProperty('item')){
+								//for each suggested item
+								for(var i=0;i<itemJson.ids.length;i++){
+									//get this item's key
+									var id=itemJson.ids[i];
+									//get this item's json
+									var json=itemJson.item[id];
+									//run the function that executes for each item
+									itemFunc(json,id,i);
+									//accumulate count
+									itemLength++;
+								}
+							}
+						}
+					}
+				}
+				return itemLength;
 			};
 			//==EDIT XML EVENTS==
 			var clickEditElems=rootElem.find('input').not('.evs');
@@ -423,7 +449,6 @@ function updateCode(){
 													var sugElemJson=getSuggestData({'root':sugChildJson,'path':['elem']});
 													var sugTextJson=getSuggestData({'root':sugChildJson,'path':['text']});
 													//***
-													var test;
 													break;
 											}
 										}
@@ -765,51 +790,69 @@ function updateCode(){
 						}
 						return ret;
 					};
-					var defaultVal;
+					var addItem=function(items,json,itemType){
+						//set the item type in the json
+						json.type=itemType;
+						//if the txt property isn't already set, then use the id value by default
+						if(!json.hasOwnProperty('txt')){json['txt']=json.id;}
+						//indicate if there should be a separator for a new itemType in the same list
+						json['newType']=false;
+						//if there are other items already before this item
+						if(items.length>0){
+							//if the type of the previous item is different from the type of this item
+							if(items[items.length-1].type!=itemType){
+								//indicate transition to a new type in the list
+								json.newType=true;
+							}
+						}
+						//add the json to the items array
+						items.push(json);
+						//return the updated array of items
+						return items;
+					};
 					//get suggested attr keys
 					var getAttrKeysJson=function(){
 						var items=[];
 						//if there are any suggested attributes
 						var parentName=getParentName(menuBtn);
-						var attrJson=getSuggestData({'path':[parentName,'attr']});
-						if(attrJson!=undefined){
-							//for each suggested attribute
-							for (var attrName in attrJson){
-								//if key is an actual property of an object, (not from the prototype)
-								if (attrJson.hasOwnProperty(attrName)){
-									//if first attribute, then set as default
-									if(defaultVal==undefined){defaultVal=attrName;}
-									//add this to items
-									items.push({'val':attrName,'txt':attrName});
-								}
-							}
-						}
+						var sugAttrJson=getSuggestData({'path':['node',parentName,'attr']});
+						var attrsJson=getSuggestItems(sugAttrJson);
+						//for each suggested item
+						eachSuggestItem(attrsJson,function(json,id,index){
+							//add this to items
+							items=addItem(items,json,'attr_key');
+						});
 						return items;
 					};
 					//get suggested attr values
 					var getAttrValsJson=function(){
 						var items=[];
-						//if there are any suggested attribute values for this attribute key
-						var kElem=menuBtn.parent().children('k:first');
-						var kTxtElem=kElem.children('txt:first');
-						var kTxt=kTxtElem.html();
+						//if there are any suggested attributes
 						var parentName=getParentName(menuBtn);
-						var valsArray=getSuggestData({'path':[parentName,'attr',kTxt,'vals']});
-						if(valsArray!=undefined){
-							if(valsArray.length>0){
-								var defaultStr=getSuggestData({'path':[parentName,'attr',kTxt,'default']});
-								//for each suggested value
-								for(var v=0;v<valsArray.length;v++){
-									var val=valsArray[v];
-									//if first attribute, then set as default... by default :P
-									if(defaultVal==undefined){defaultVal=val;}
-									//is marked as default suggested value?
-									var isDefault=false;
-									if(defaultStr!=undefined){
-										if(val==defaultStr){defaultVal=val;}
+						var sugAttrJson=getSuggestData({'path':['node',parentName,'attr']});
+						var attrsJson=getSuggestItems(sugAttrJson);
+						if(attrsJson.ids.length>0){
+							//get the attribute key value <k>
+							var kElem=menuBtn.parent().children('k:first');
+							var kTxtElem=kElem.children('txt:first');
+							var kTxt=kTxtElem.html(); kTxt=kTxt.toLowerCase();
+							//if this attribute key value has any corresponding suggested values
+							if(attrsJson.item.hasOwnProperty(kTxt)){
+								//if there are any suggested values for this attribute
+								var attrJson=attrsJson.item[kTxt];
+								if(attrJson.hasOwnProperty('vals')){
+									//get the default attribute value, if there is one
+									var defaultSet=false; var defaultVal; if(attrJson.hasOwnProperty('default')){defaultVal=attrJson.default;}
+									//for each suggested attribute value
+									for(var v=0;v<attrJson.vals.length;v++){
+										var val=attrJson.vals[v];
+										//if this is the default value, then set boolean = true
+										var isDefault=false; if(val==defaultVal){isDefault=true; defaultSet=true;}
+										//add this to items
+										items=addItem(items,{'id':val,'default_item':isDefault},'attr_val');
 									}
-									//add this to items
-									items.push({'val':val,'txt':val});
+									//if no default value was set, if there were any items, set the first item as default... by default
+									if(!defaultSet){if(items.length>0){items[0].default_item=true;}}
 								}
 							}
 						}
@@ -818,61 +861,72 @@ function updateCode(){
 					//get suggested child names
 					var getChildNamesJson=function(parentName){
 						var items=[];
-						//if there are any suggested attributes
-						var childJson=getSuggestData({'path':[parentName,'child']});
-						if(childJson!=undefined){
-							//for each suggested child
-							for (var childKey in childJson){
-								//if key is an actual property of an object, (not from the prototype)
-								if (childJson.hasOwnProperty(childKey)){
-									//function to only return true for BOOLEAN true values
-									var isTrue=function(){
-										var ret=false;
-										if(childJson[childKey]!=undefined){
-											if(typeof childJson[childKey]=='boolean'){
-												if(childJson[childKey]){ret=true;}
-											}
-										}return ret;
-									};
-									//depending on the child key
-									switch(childKey){
-										case 'default': //default selected element name
-											defaultVal=childJson[childKey];
-											break;
-										case 'cdata':
-											//if cdata is allowed in suggestions
-											if(isTrue()){
-												items.push({'val':'cdata','class':'cdata','start':'&lt;![CDATA[','end':']]&gt;','txt':'&lt;![CDATA[ ... ]]&gt;'}); //add this to items
-											}
-											break;
-										case 'comment':
-											//if comment is allowed in suggestions
-											if(isTrue()){
-												items.push({'val':'comment','class':'comment','start':'&lt;!--','end':'--&gt;','txt':'&lt;!-- ... --&gt;'}); //add this to items
-											}
-											break;
-										case 'text':
-											//if text is allowed in suggestions
-											if(isTrue()){
-												items.push({'val':'text','class':'text','txt':'text'}); //add this to items
-											}
-											break;
-										case 'elem':
-											//for each element
-											var elems=childJson[childKey];
-											for(var e=0;e<elems.length;e++){
-												var elemJson=elems[e];
-												//add this to items
-												items.push({
-													'start':'&lt;'+elemJson.tag+'&gt;','end':'&lt;/'+elemJson.tag+'&gt;',
-													'class':elemJson.tag,'val':elemJson.tag,'txt':'&lt;'+elemJson.tag+'&gt;'
-												});
-											}
-											break;
-									}
+						//get the suggested child elems/text node types
+						var sugChildJson=getSuggestData({'path':['node',parentName,'child']});
+						var sugElemJson=getSuggestData({'root':sugChildJson,'path':['elem']});
+						var elemItemsJson=getSuggestItems(sugElemJson);
+						var sugTextJson=getSuggestData({'root':sugChildJson,'path':['text']});
+						var textItemsJson=getSuggestItems(sugTextJson);
+						//if there is a default child type elem/text
+						var defaultChildType='elem';
+						if(sugChildJson.hasOwnProperty('default')){
+							//if the default child type is text, then use that instead of elem
+							if(sugChildJson.default=='text'){defaultChildType=sugChildJson.default;}
+						}
+						//overwrite default
+						var isDefault=function(defaultStatus,childType){
+							//if this item is set as the default
+							if(defaultStatus){
+								//but if this item type is not the default
+								if(defaultChildType!=childType){
+									//then this item cannot be the default item
+									defaultStatus=false;
 								}
 							}
+							return defaultStatus;
+						};
+						//indicator for finding the default item
+						var defaultSet=false;
+						//if there are any suggested text child nodes
+						if(textItemsJson.ids.length>0){
+							//for each suggested item
+							eachSuggestItem(textItemsJson,function(json,id,index){
+								//overwrite item default status, if needed
+								json.default_item=isDefault(json.default_item,'text');
+								//if this is the default value
+								if(json.default_item){defaultSet=true;}
+								//set the item display txt
+								switch(json.id.toLowerCase()){
+									case 'cdata':
+										json['txt']='&lt;![CDATA[ ]]&gt;';
+										break;
+									case 'comment':
+										json['txt']='&lt;!-- --&gt;';
+										break;
+									case 'text':
+										json['txt']='"'+json.id+'"';
+										break;
+								}
+								//add this to items
+								items=addItem(items,json,'child_text');
+							});
 						}
+						//if there are any suggested elem child nodes
+						if(elemItemsJson.ids.length>0){
+							//for each suggested item
+							eachSuggestItem(elemItemsJson,function(json,id,index){
+								//overwrite item default status, if needed
+								json.default_item=isDefault(json.default_item,'elem');
+								//if this is the default value
+								if(json.default_item){defaultSet=true;}
+								//set the item display txt
+								json['txt']='&lt;'+json.id+'&gt;';
+								//add this to items
+								items=addItem(items,json,'child_elem');
+							});
+						}
+						//if no default value was set, if there were any items, set the first item as default... by default
+						if(!defaultSet){if(items.length>0){items[0].default_item=true;}}
 						return items;
 					};
 					//get the suggested data, depending on the menuBtn type
@@ -916,43 +970,23 @@ function updateCode(){
 						menuBtn.append('<suggest></suggest>');
 						suggestWrap=menuBtn.children('suggest:first');
 						//for each suggested item
-						var itemIndex=0;
 						for(var s=0;s<suggestItems.length;s++){
-							var sugJson=suggestItems[s];
-							//val attribute
-							var valStr;var valAttr='';if(sugJson.hasOwnProperty('val')){valAttr=' val="'+sugJson.val+'"';valStr=sugJson.val;}
-							//start attribute
-							var startAttr='';if(sugJson.hasOwnProperty('start')){startAttr=' start="'+sugJson.start+'"';}
-							//end attribute
-							var endAttr='';if(sugJson.hasOwnProperty('end')){endAttr=' end="'+sugJson.end+'"';}
-							//class
-							var classStr='';if(sugJson.hasOwnProperty('class')){classStr=sugJson.class;}
-							var nameAttr='';
-							if(classStr.length>0){
-								nameAttr=' name="'+classStr+'"';
-								classStr=' c_'+classStr;
-							}
-							//is default selected on init?
-							var isDefaultSug=false;
-							//if there is NO default value
-							if(defaultVal==undefined){
-								//select the first, by default
-								if(itemIndex==0){isDefaultSug=true;}
-							}else{
-								//there is a default value...
-
-								//so if THIS is the default value
-								if(valStr==defaultVal){isDefaultSug=true;}
-							}
-							//if this item should be the default selected item on init
-							var selClass=''; var defaultClass='';
-							if(isDefaultSug){
-								selClass=' sel';defaultClass=' default';
-							}
-							//append the item html
-							suggestWrap.append('<it class="i'+defaultClass+selClass+classStr+'"'+valAttr+startAttr+endAttr+nameAttr+'>'+sugJson.txt+'</it>');
-							//next item index
-							itemIndex++;
+							//get item's json
+							var iJson=suggestItems[s];
+							//start class list
+							var classList='';
+							//default_item
+							if(iJson.default_item){
+								classList+=' default sel';}
+							//separator for new type
+							if(iJson.newType){
+								classList+=' sep';}
+							//remove leading space from class list
+							classList=classList.trim();
+							//if there are any classes, then set the class attribute
+							var classAttr=''; if(classList.length>0){classAttr=' class="'+classList+'"';}
+							//set the item's html
+							suggestWrap.append('<it itype="'+iJson.type+'" val="'+iJson.id+'"'+classAttr+'>'+iJson.txt+'</it>');
 						}
 						//attach the events to the suggestion wrapper
 						var itElems=suggestWrap.children('it').not('evs');

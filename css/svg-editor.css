@@ -26,8 +26,14 @@
 #code .active suggest{display:block;}
 #code .active.focus suggest{opacity:1;}
 #code suggest it{display:block;padding:.1em .5em;font-size:97%;color:#000;white-space:nowrap;cursor:pointer;}
+#code suggest it[itype="child_elem"]{color:#881280;}
+#code suggest it[itype="child_text"]{color:#236e25;}
+#code suggest it[itype="child_text"][val="text"]{color:#000;font-style:italic;}
+#code suggest it[itype="attr_key"]{color:#994500;}
+#code suggest it[itype="attr_val"]{color:#1a1aa6;}
+#code suggest it.sep{border-top:dotted .2em #ccc;}
 #code suggest it:hover{background-color:#F2F2F2;}
-#code suggest it.sel{background-color:rgba(0,100,255,1);color:#fff;}
+#code suggest it.sel{background-color:rgba(0,100,255,1);color:#fff !important;}
 #code g.closed > x{display:none;}
 #code e > x.last{width:0;}
 #code g.empty > x,#code g.closed > x.first,#code e > x,#code e:hover > x.last{display:inline-block;width:1.4em;height:1em;vertical-align:middle;}
