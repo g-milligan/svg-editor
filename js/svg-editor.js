@@ -327,187 +327,6 @@ function updateCode(){
 				}
 				return itemLength;
 			};
-			//==EDIT XML EVENTS==
-			var clickEditElems=rootElem.find('input').not('.evs');
-			clickEditElems.addClass('evs');
-			var btnElems=clickEditElems.parent();
-			//function to clear the current focus
-			var clearFocus=function(keepFocusBtn){
-				console.log('start clearFocus');
-				var anyChanges=false;
-				//if there are any elements with "blank-txt" then remove these elements
-				var blankTxtElems=codeElem.find('.blank-txt');
-				if(blankTxtElems.length>0){
-					//for each blank txt element
-					blankTxtElems.each(function(){
-						var blankTxtElem=jQuery(this);
-						//if NOT a NEW element <x> button
-						if(blankTxtElem[0].tagName.toLowerCase()!='x'){
-							//NOTE: the blank txt element will either be <g> or <kv>
-							var xNextElem=blankTxtElem.next('x:first');
-							//if the <x> button, after blankTxtElem, is the last one
-							if(xNextElem.hasClass('last')){
-								//this xNextElem, will no longer be the last...
-								var xPrevElem=blankTxtElem.prev('x:first');
-								//the previous <x> element will be last instead
-								xNextElem.removeClass('last');
-								xPrevElem.addClass('last');
-							}
-							//remove the <x> element after blankTxtElem
-							xNextElem.remove();
-							//remove blankTxtElem
-							blankTxtElem.remove();
-							//changes made
-							anyChanges=true;
-						}else{
-							//blankTxtElem is <x>...
-							blankTxtElem.removeClass('blank-txt');
-						}
-					});
-				}
-				//if there are any buttons with focus
-				var clearBtns=codeElem.find('.focus');
-				if(clearBtns.length>0){
-					//if ignore a button that has focus...
-					if(keepFocusBtn!=undefined&&keepFocusBtn.length>0){clearBtns=clearBtns.not(keepFocusBtn);}
-					//if there are still buttons to clear focus from
-					if(clearBtns.length>0){
-						//for each button to clear
-						clearBtns.each(function(){
-							//if this button has the focus class still
-							var btn=jQuery(this);
-							if(btn.hasClass('focus')){
-								//remove the focus and over classes
-								btn.removeClass('focus'); btn.removeClass('over');
-								//make sure any suggest menu is closed
-								closeSuggestMenu(btn);
-								//get the tag name of btn
-								var btnTag=btn[0].tagName.toLowerCase();
-								//get <txt>
-								var txtElem=btn.children('txt:first');
-								//get new text
-								var newTxt=txtElem.text(); newTxt=newTxt.trim();
-								newTxt=replaceAll(newTxt,'&nbsp;',' ');
-								//if the new text is different from the old text
-								if(newTxt!=txtElem[0].previousText){
-									//make sure the new text is set
-									txtElem[0].previousText=newTxt;
-									//refresh the design view flag
-									anyChanges=true;
-									//if text was entered into an <x> element (then a new node must be created)
-									if(btnTag=='x'){
-										//if the new text is NOT blank (can't create a NEW item if the text is blank)
-										if(newTxt.trim().length>0){
-											//==CREATE NEW ITEM==
-											//reset the previous text for <x> element
-											txtElem[0].previousText=undefined;
-											//clear out the temporary text inside the <x> button
-											txtElem.html('');
-											//get the parent xml name, n=""
-											var parentElem=btn.parent();
-											//if the parent node has an n="" attribute (if there is no n attribute then treat the parent as the root, //)
-											var xmlParentName=parentElem.attr('n'); if(xmlParentName==undefined){xmlParentName='';}
-											if(xmlParentName.length<1){xmlParentName='//';}
-											//the type of new node that will be created depends on the parent of <x>
-											var parentTag=parentElem[0].tagName.toLowerCase();
-											switch(parentTag){
-												case 'e': //create new ATTRIBUTE
-													//get the suggest json for attributes, of this parent node name
-													var sugAttrJson=getSuggestData({'path':['node',xmlParentName,'attr']});
-													var attrsJson=getSuggestItems(sugAttrJson);
-													//try to get the default value for this attribute, if any
-													var attrVal='';
-													if(attrsJson.item.hasOwnProperty(newTxt.toLowerCase())){
-														attrJson=attrsJson.item[newTxt.toLowerCase()];
-														if(attrJson.hasOwnProperty('default')){
-															attrVal=attrJson.default;
-														}
-													}
-													//create the new xml to add
-													var xHtml='<x{pos-class}><input type="text" /></x>';
-													var attrHtml='<kv><k><space> </space><txt>'+newTxt+'</txt><input type="text" /></k>="<v><txt>'+attrVal+'</txt><input type="text" class="ignore-keyup" /></v>"</kv>';
-													//if this is the LAST <x> element
-													if(btn.hasClass('last')){
-														//this btn will no longer be last <x>
-														btn.removeClass('last');
-														//add the last class to the new <x> element
-														xHtml=xHtml.replace('{pos-class}',' class="last"');
-													}else{
-														//the new <x> button doesn't have a "last" class
-														xHtml=xHtml.replace('{pos-class}','');
-													}
-													//set the new xml
-													btn.after(attrHtml+xHtml);
-													//get the new <kv> element
-													var newKvElem=btn.next('kv:first');
-													//recursive call: add the events to the new <kv><x> elements
-													evsSourceEditor(newKvElem.parent());
-													//get the new <v> element
-													var newVElem=newKvElem.children('v:first');
-													//set the cursor in the new v element
-													newVElem.click();
-													newVElem.click(); //double clicked to select text, and show value suggestions
-													//if the <v> value is starting blank, with no default value
-													if(attrVal.length<1){newKvElem.addClass('blank-txt');}
-													break;
-												default: //create new ELEMENT
-													//get the suggest json for children, of this parent node name
-													var sugChildJson=getSuggestData({'path':['node',xmlParentName,'child']});
-													var sugElemJson=getSuggestData({'root':sugChildJson,'path':['elem']});
-													var sugTextJson=getSuggestData({'root':sugChildJson,'path':['text']});
-													//***
-													break;
-											}
-										}
-									}else{
-										//this wasn't <x> button, this was an existing node...
-
-										//==EDIT EXISTING ITEM==
-										//***
-									}
-								}
-								//if a new item wasn't added (existing item edited)
-								if(btnTag!='x'){
-									//remove <l> elements markup; just need the plain text in the <txt> element when it doesn't have focus
-									txtElem.html(newTxt);
-								}else{
-									//a new item was created, so reset the <txt> inside the <x> button to blank
-									txtElem.html('');
-								}
-							}
-						});
-					}
-				}
-				//if any edit changes were made
-				if(anyChanges){
-					//refresh the design view
-					//***
-				}
-				console.log('end clearFocus');
-			};
-			//function to create the markup for one letter
-			var gLetterMarkup=function(letterStr,json){
-				if(letterStr==' '){
-					letterStr='&nbsp;';
-				}
-				//surround this letter with an element
-				var classStr='';
-				if(json!=undefined){
-					//cursor class
-					if(json.hasOwnProperty('cursorClass')){
-						//if first class, start list, otherwise, add separator
-						if(classStr.length<1){classStr=' class="';}
-						else{classStr+=' ';}
-						//add cursor class
-						classStr+=json.cursorClass;
-					}
-					//if any classes added, end them
-					if(classStr.length>0){classStr+="\"";}
-				}
-				//set the markup
-				var markup='<l'+classStr+'>'+letterStr+'</l>';
-				return markup;
-			};
 			//function to add events to new <l>etter elements
 			var evsLetters=function(txtElem){
 				//events for <l> each letter
@@ -679,6 +498,343 @@ function updateCode(){
 					}
 				});
 			};
+			//function to create the markup for one letter
+			var gLetterMarkup=function(letterStr,json){
+				if(letterStr==' '){
+					letterStr='&nbsp;';
+				}
+				//surround this letter with an element
+				var classStr='';
+				if(json!=undefined){
+					//cursor class
+					if(json.hasOwnProperty('cursorClass')){
+						//if first class, start list, otherwise, add separator
+						if(classStr.length<1){classStr=' class="';}
+						else{classStr+=' ';}
+						//add cursor class
+						classStr+=json.cursorClass;
+					}
+					//if any classes added, end them
+					if(classStr.length>0){classStr+="\"";}
+				}
+				//set the markup
+				var markup='<l'+classStr+'>'+letterStr+'</l>';
+				return markup;
+			};
+			//add the letters markup into <txt>.text() if no <l>etters are already there
+			var lettersMarkup=function(txtElem){
+				var txt=txtElem.text();
+				//if the .text() is the same as .html()... if no <l>etter markup
+				if(txt==txtElem.html()){
+					txt=txt.trim();
+					//split up each character
+					var letterArray=txt.split('');txt='';
+					//for each character
+					for(var l=0;l<letterArray.length;l++){
+						//if last letter... then add cursor class
+						var json={};
+						if(l==letterArray.length-1){json['cursorClass']='cursor'}
+						//get the letter's markup
+						var letter=letterArray[l];
+						txt+=gLetterMarkup(letter,json);
+					}
+					//set the letters surrounded by <l> updated text html
+					txtElem.html(txt);
+					//set the <l> events
+					evsLetters(txtElem);
+				}
+			};
+			//set the selected text in the hidden <input> element so that Ctl+C will copy the selected
+			var inputSelectedTxt=function(txtElem){
+				//if the txtElem exists
+				if(txtElem!=undefined&&txtElem.length>0){
+					//get the hidden <input> element
+					var inputElem=txtElem.parent().children('input:last');
+					//if there are any selected letters
+					var selElems=txtElem.children('l.sel');
+					if(selElems.length>0){
+						//get the selected string... for each selected letter
+						var val='';
+						selElems.each(function(){
+							//get the letter
+							var letter=jQuery(this).html();
+							//decode the letter
+							if(letter=='&nbsp;'){letter=' ';}
+							//append the letter to the string val
+							val+=letter;
+						});
+						//set the selected text into the hidden <input>
+						inputElem.val(val);
+					}else{
+						//no selected letters... so the hidden <input> should be blank
+						inputElem.val('');
+					}
+					//select the text in the hidden <input> so that it can be Ctl+C, Ctl+X copied, etc...
+					inputElem.focus();inputElem.select();
+				}
+			};
+			//function to select ALL of the <txt>
+			var selectAllTxt=function(txtElem){
+				//if the txtElem exists
+				if(txtElem!=undefined&&txtElem.length>0){
+					//make sure there is <l>etter markup for each letter
+					lettersMarkup(txtElem);
+					//select all of the text and remove the cursor
+					txtElem.children('l').addClass('sel').removeClass('cursor');
+					//put the cursor at the start of the text
+					txtElem.children('l:first').addClass('before').addClass('cursor');
+					//write the selected text to the hidden <input> so that Ctl+C works
+					inputSelectedTxt(txtElem);
+				}
+			};
+			//==EDIT XML EVENTS==
+			var clickEditElems=rootElem.find('input').not('.evs');
+			clickEditElems.addClass('evs');
+			var btnElems=clickEditElems.parent();
+			//function to clear the current focus
+			var clearFocus=function(keepFocusBtn){
+				var anyChanges=false;
+				//if there are any elements with "blank-txt" then remove these elements
+				var blankTxtElems=codeElem.find('.blank-txt');
+				if(blankTxtElems.length>0){
+					//for each blank txt element
+					blankTxtElems.each(function(){
+						var blankTxtElem=jQuery(this);
+						//if NOT a NEW element <x> button
+						if(blankTxtElem[0].tagName.toLowerCase()!='x'){
+							//NOTE: the blank txt element will either be <g> or <kv>
+							var xNextElem=blankTxtElem.next('x:first');
+							//if the <x> button, after blankTxtElem, is the last one
+							if(xNextElem.hasClass('last')){
+								//this xNextElem, will no longer be the last...
+								var xPrevElem=blankTxtElem.prev('x:first');
+								//the previous <x> element will be last instead
+								xNextElem.removeClass('last');
+								xPrevElem.addClass('last');
+							}
+							//remove the <x> element after blankTxtElem
+							xNextElem.remove();
+							//remove blankTxtElem
+							blankTxtElem.remove();
+							//changes made
+							anyChanges=true;
+						}else{
+							//blankTxtElem is <x>...
+							blankTxtElem.removeClass('blank-txt');
+						}
+					});
+				}
+				//if there are any buttons with focus
+				var clearBtns=codeElem.find('.focus');
+				if(clearBtns.length>0){
+					//if ignore a button that has focus...
+					if(keepFocusBtn!=undefined&&keepFocusBtn.length>0){clearBtns=clearBtns.not(keepFocusBtn);}
+					//if there are still buttons to clear focus from
+					if(clearBtns.length>0){
+						console.log('start clearFocus');
+						//for each button to clear
+						clearBtns.each(function(){
+							//if this button has the focus class still
+							var btn=jQuery(this);
+							if(btn.hasClass('focus')){
+								//remove the focus and over classes
+								btn.removeClass('focus'); btn.removeClass('over');
+								//make sure any suggest menu is closed
+								closeSuggestMenu(btn);
+								//get the tag name of btn
+								var btnTag=btn[0].tagName.toLowerCase();
+								//get <txt>
+								var txtElem=btn.children('txt:first');
+								//get new text
+								var newTxt=txtElem.text(); newTxt=newTxt.trim();
+								newTxt=replaceAll(newTxt,'&nbsp;',' ');
+								//if the new text is different from the old text
+								if(newTxt!=txtElem[0].previousText){
+									//make sure the new text is set
+									txtElem[0].previousText=newTxt;
+									//refresh the design view flag
+									anyChanges=true;
+									//if text was entered into an <x> element (then a new node must be created)
+									if(btnTag=='x'){
+										//if the new text is NOT blank (can't create a NEW item if the text is blank)
+										if(newTxt.trim().length>0){
+											//==CREATE NEW ITEM==
+											//reset the previous text for <x> element
+											txtElem[0].previousText=undefined;
+											//clear out the temporary text inside the <x> button
+											txtElem.html('');
+											//get the parent xml name, n=""
+											var parentElem=btn.parent();
+											//if the parent node has an n="" attribute (if there is no n attribute then treat the parent as the root, //)
+											var xmlParentName=parentElem.attr('n'); if(xmlParentName==undefined){xmlParentName='';}
+											if(xmlParentName.length<1){xmlParentName='//';}
+											//the type of new node that will be created depends on the parent of <x>
+											var parentTag=parentElem[0].tagName.toLowerCase();
+											switch(parentTag){
+												case 'e': //create new ATTRIBUTE
+													//get the suggest json for attributes, of this parent node name
+													var sugAttrJson=getSuggestData({'path':['node',xmlParentName,'attr']});
+													var attrsJson=getSuggestItems(sugAttrJson);
+													//try to get the default value for this attribute, if any
+													var attrVal='';
+													if(attrsJson.item.hasOwnProperty(newTxt.toLowerCase())){
+														attrJson=attrsJson.item[newTxt.toLowerCase()];
+														if(attrJson.hasOwnProperty('default')){
+															attrVal=attrJson.default;
+														}
+													}
+													//create the new xml to add
+													var xHtml='<x{pos-class}><input type="text" /></x>';
+													var attrHtml='<kv><k><space> </space><txt>'+newTxt+'</txt><input type="text" /></k>="<v><txt>'+attrVal+'</txt><input type="text" class="ignore-keyup" /></v>"</kv>';
+													//if this is the LAST <x> element
+													if(btn.hasClass('last')){
+														//this btn will no longer be last <x>
+														btn.removeClass('last');
+														//add the last class to the new <x> element
+														xHtml=xHtml.replace('{pos-class}',' class="last"');
+													}else{
+														//the new <x> button doesn't have a "last" class
+														xHtml=xHtml.replace('{pos-class}','');
+													}
+													//set the new xml
+													btn.after(attrHtml+xHtml);
+													//get the new <kv> element
+													var newKvElem=btn.next('kv:first');
+													//recursive call: add the events to the new <kv><x> elements
+													evsSourceEditor(newKvElem.parent());
+													//get the new <v> element
+													var newVElem=newKvElem.children('v:first');
+													//set the focus on this new <v> element
+													document.body.setBtnFocus(newVElem);
+													//set the cursor in the new v element and select all of the new text
+													selectAllTxt(newVElem.children('txt:first'));
+													//if the <v> value is starting blank, with no default value
+													if(attrVal.length<1){newKvElem.addClass('blank-txt');}
+													break;
+												default: //create new ELEMENT
+													//get the suggest json for children, of this parent node name
+													var sugChildJson=getSuggestData({'path':['node',xmlParentName,'child']});
+													var sugElemJson=getSuggestData({'root':sugChildJson,'path':['elem']});
+													var sugTextJson=getSuggestData({'root':sugChildJson,'path':['text']});
+													//***
+													break;
+											}
+										}
+									}else{
+										//this wasn't <x> button, this was an existing node...
+
+										//==EDIT EXISTING ITEM==
+										//***
+									}
+								}
+								//if a new item wasn't added (existing item edited)
+								if(btnTag!='x'){
+									//remove <l> elements markup; just need the plain text in the <txt> element when it doesn't have focus
+									txtElem.html(newTxt);
+								}else{
+									//a new item was created, so reset the <txt> inside the <x> button to blank
+									txtElem.html('');
+								}
+							}
+						});
+						console.log('end clearFocus');
+					}
+				}
+				//if any edit changes were made
+				if(anyChanges){
+					//refresh the design view
+					//***
+					console.log('SAVE CHANGES');
+				}
+			};
+			//function to set the focus on the clicked btn element
+			var setBtnFocus=function(btn,e){
+				//if NOT already has focus
+				if(!btn.hasClass('focus')){
+					//set the focus of this hidden <input> (make sure it's set)
+					var focusInput=btn.children('input:last');
+					focusInput.focus();
+					//set the focus class of this element
+					btn.addClass('focus');
+					//clear previous focus (but keep focus on btn)
+					clearFocus(btn);
+					//if there is existing text being modified (should be)
+					var txtElem=btn.children('txt:first');
+					if(txtElem.length>0){
+						//get the input text
+						var txt=txtElem.text(); txt=txt.trim();
+						//if the text is NOT blank
+						if(txt.length>0){
+							//record this previous text, before EDITS are made
+							txtElem[0]['previousText']=txt;
+							//get the original text width, without the <l> markup
+							var txtWidth=txtElem.innerWidth();
+							//add the <l> markup around each letter
+							lettersMarkup(txtElem);
+							//if the mouse actually clicked the button
+							if(btn.hasClass('over')){
+								//if click event is available
+								if(e!=undefined){
+									//figure out which letter to add the cursor to first based on click position
+									var mouseLeft=e.clientX;
+									var txtLeft=txtElem.offset().left;
+									//if the mouse is NOT left of the text's left edge (shouldn't be IF clicked)
+									if(mouseLeft>=txtLeft){
+										//get the mouse position, relative to the text element
+										mouseLeft=mouseLeft-txtLeft;
+										//if the mouse is NOT right of the text's right edge (shouldn't be IF clicked)
+										if(mouseLeft<=txtWidth){
+											//calculate the percentage that the mouse cursor is centered horizontally in the text element
+											var mouseLeftPercent=mouseLeft/txtWidth*100;
+											//for each letter
+											var lettersWidth=0;
+											txtElem.children('l').each(function(){
+												//accumulate the letters width
+												var letterWidth=jQuery(this).outerWidth();
+												lettersWidth+=letterWidth;
+												//calculate current width percent
+												var currentPercent=lettersWidth/txtWidth*100;
+												//if the percent is greater or equal to the cursor position percent
+												if(currentPercent>=mouseLeftPercent){
+													//if there is NO previous letter
+													var addCursorElem=jQuery(this).prev('l:first');
+													if(addCursorElem.length<1){
+														//the clicked letter is the first letter
+														addCursorElem=jQuery(this);
+														//make sure the cursor will appear to the left of the first letter
+														addCursorElem.addClass('before');
+													}
+													//if this isn't already where the cursor is located
+													if(!addCursorElem.hasClass('cursor')){
+														//clear the default cursor class and before class
+														txtElem.children('l.cursor').removeClass('cursor').not(addCursorElem).removeClass('before');
+														//set the cursor on the letter that's closest to the mouse position
+														addCursorElem.addClass('cursor');
+													}
+													//force the letter loop to end
+													return false;
+												}
+											});
+										}
+									}
+								}
+							}
+						}else{
+							//there is no text inside <txt> ...
+
+							//add the cursor inside this <txt> element
+							txtElem.html('<l class="blank before cursor"></l>');
+						}
+						//add the dynamic events to the new <l>etter elements (if any don't already have evs)
+						evsLetters(txtElem);
+					}
+					//build the <suggest> menu for this button, if there is data AND the <suggest> html isn't already built
+					initSuggestMenu(btn);
+					//open the suggestion menu popup, if conditions are right
+					openSuggestMenu(btn);
+				}
+			};
+			document.body['setBtnFocus']=setBtnFocus;
 			//function to close the suggestion popup
 			var closeSuggestMenu=function(menuBtn,doClose){
 				//if the suggestion menu IS active
@@ -1084,47 +1240,6 @@ function updateCode(){
 							selectSuggestItem(suggestWrap,jQuery(this),true);
 						});
 					}
-				}
-			};
-			//set the selected text in the hidden <input> element so that Ctl+C will copy the selected
-			var inputSelectedTxt=function(txtElem){
-				//if the txtElem exists
-				if(txtElem!=undefined&&txtElem.length>0){
-					//get the hidden <input> element
-					var inputElem=txtElem.parent().children('input:last');
-					//if there are any selected letters
-					var selElems=txtElem.children('l.sel');
-					if(selElems.length>0){
-						//get the selected string... for each selected letter
-						var val='';
-						selElems.each(function(){
-							//get the letter
-							var letter=jQuery(this).html();
-							//decode the letter
-							if(letter=='&nbsp;'){letter=' ';}
-							//append the letter to the string val
-							val+=letter;
-						});
-						//set the selected text into the hidden <input>
-						inputElem.val(val);
-					}else{
-						//no selected letters... so the hidden <input> should be blank
-						inputElem.val('');
-					}
-					//select the text in the hidden <input> so that it can be Ctl+C, Ctl+X copied, etc...
-					inputElem.focus();inputElem.select();
-				}
-			};
-			//function to select ALL of the <txt>
-			var selectAllTxt=function(txtElem){
-				//if the txtElem exists
-				if(txtElem!=undefined&&txtElem.length>0){
-					//select all of the text and remove the cursor
-					txtElem.children('l').addClass('sel').removeClass('cursor');
-					//put the cursor at the start of the text
-					txtElem.children('l:first').addClass('before').addClass('cursor');
-					//write the selected text to the hidden <input> so that Ctl+C works
-					inputSelectedTxt(txtElem);
 				}
 			};
 			//function to set txt element as empty
@@ -1981,101 +2096,6 @@ function updateCode(){
 				//if NOT ignoring this click
 				if(!btn.hasClass('ignore-click')){
 					var btnTag=btn[0].tagName.toLowerCase();
-					//set the focus of this hidden <input> (make sure it's set)
-					var focusInput=btn.children('input:last');
-					focusInput.focus();
-					//function to set the focus on the clicked btn element
-					var setBtnFocus=function(){
-						//if NOT already has focus
-						if(!btn.hasClass('focus')){
-							//set the focus class of this element
-							btn.addClass('focus');
-							//clear previous focus (but keep focus on btn)
-							clearFocus(btn);
-							//if there is existing text being modified (should be)
-							var txtElem=btn.children('txt:first');
-							if(txtElem.length>0){
-								//get the input text
-								var txt=txtElem.text(); txt=txt.trim();
-								//if the text is NOT blank
-								if(txt.length>0){
-									//record this previous text, before EDITS are made
-									txtElem[0]['previousText']=txt;
-									//split up each character
-									var letterArray=txt.split('');txt='';
-									//for each character
-									for(var l=0;l<letterArray.length;l++){
-										//if last letter... then add cursor class
-										var json={};
-										if(l==letterArray.length-1){json['cursorClass']='cursor'}
-										//get the letter's markup
-										var letter=letterArray[l];
-										txt+=gLetterMarkup(letter,json);
-									}
-									//get the original text width
-									var txtWidth=txtElem.innerWidth();
-									//set the letters surrounded by <l> updated text html
-									txtElem.html(txt);
-									//if the mouse actually clicked the button
-									if(btn.hasClass('over')){
-										//figure out which letter to add the cursor to first based on click position
-										var mouseLeft=e.clientX;
-										var txtLeft=txtElem.offset().left;
-										//if the mouse is NOT left of the text's left edge (shouldn't be IF clicked)
-										if(mouseLeft>=txtLeft){
-											//get the mouse position, relative to the text element
-											mouseLeft=mouseLeft-txtLeft;
-											//if the mouse is NOT right of the text's right edge (shouldn't be IF clicked)
-											if(mouseLeft<=txtWidth){
-												//calculate the percentage that the mouse cursor is centered horizontally in the text element
-												var mouseLeftPercent=mouseLeft/txtWidth*100;
-												//for each letter
-												var lettersWidth=0;
-												txtElem.children('l').each(function(){
-													//accumulate the letters width
-													var letterWidth=jQuery(this).outerWidth();
-													lettersWidth+=letterWidth;
-													//calculate current width percent
-													var currentPercent=lettersWidth/txtWidth*100;
-													//if the percent is greater or equal to the cursor position percent
-													if(currentPercent>=mouseLeftPercent){
-														//if there is NO previous letter
-														var addCursorElem=jQuery(this).prev('l:first');
-														if(addCursorElem.length<1){
-															//the clicked letter is the first letter
-															addCursorElem=jQuery(this);
-															//make sure the cursor will appear to the left of the first letter
-															addCursorElem.addClass('before');
-														}
-														//if this isn't already where the cursor is located
-														if(!addCursorElem.hasClass('cursor')){
-															//clear the default cursor class and before class
-															txtElem.children('l.cursor').removeClass('cursor').not(addCursorElem).removeClass('before');
-															//set the cursor on the letter that's closest to the mouse position
-															addCursorElem.addClass('cursor');
-														}
-														//force the letter loop to end
-														return false;
-													}
-												});
-											}
-										}
-									}
-								}else{
-									//there is no text inside <txt> ...
-
-									//add the cursor inside this <txt> element
-									txtElem.html('<l class="blank before cursor"></l>');
-								}
-								//add the dynamic events to the new <l>etter elements
-								evsLetters(txtElem);
-							}
-							//build the <suggest> menu for this button, if there is data AND the <suggest> html isn't already built
-							initSuggestMenu(btn);
-							//open the suggestion menu popup, if conditions are right
-							openSuggestMenu(btn);
-						}
-					};
 					//if NOT an <x> btn element
 					if(btnTag!='x'){
 						//if NOT already has double click class
@@ -2098,7 +2118,7 @@ function updateCode(){
 						//if NOT double clicked
 						if(!isDblClick){
 							//finish setting the clicked button's focus
-							setBtnFocus();
+							setBtnFocus(btn,e);
 						}
 					}else{
 						//clicked on an <x> btn to create a new node...
@@ -2130,7 +2150,7 @@ function updateCode(){
 								txtElem=btn.children('txt:first');
 							}//txtElem.html('');
 							//finish setting the cursor focus for this empty <txt> element
-							setBtnFocus();
+							setBtnFocus(btn,e);
 						}
 					}
 				}else{
