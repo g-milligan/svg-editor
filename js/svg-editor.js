@@ -765,80 +765,83 @@ function updateCode(){
 					btn.addClass('focus');
 					//clear previous focus (but keep focus on btn)
 					clearFocus(btn);
-					//if there is existing text being modified (should be)
-					var txtElem=btn.children('txt:first');
-					if(txtElem.length>0){
-						//get the input text
-						var txt=txtElem.text(); txt=txt.trim();
-						//if the text is NOT blank
-						if(txt.length>0){
-							//record this previous text, before EDITS are made
-							txtElem[0]['previousText']=txt;
-							//get the original text width, without the <l> markup
-							var txtWidth=txtElem.innerWidth();
-							//add the <l> markup around each letter
-							lettersMarkup(txtElem);
-							//if the mouse actually clicked the button
-							if(btn.hasClass('over')){
-								//if click event is available
-								if(e!=undefined){
-									//figure out which letter to add the cursor to first based on click position
-									var mouseLeft=e.clientX;
-									var txtLeft=txtElem.offset().left;
-									//if the mouse is NOT left of the text's left edge (shouldn't be IF clicked)
-									if(mouseLeft>=txtLeft){
-										//get the mouse position, relative to the text element
-										mouseLeft=mouseLeft-txtLeft;
-										//if the mouse is NOT right of the text's right edge (shouldn't be IF clicked)
-										if(mouseLeft<=txtWidth){
-											//calculate the percentage that the mouse cursor is centered horizontally in the text element
-											var mouseLeftPercent=mouseLeft/txtWidth*100;
-											//for each letter
-											var lettersWidth=0;
-											txtElem.children('l').each(function(){
-												//accumulate the letters width
-												var letterWidth=jQuery(this).outerWidth();
-												lettersWidth+=letterWidth;
-												//calculate current width percent
-												var currentPercent=lettersWidth/txtWidth*100;
-												//if the percent is greater or equal to the cursor position percent
-												if(currentPercent>=mouseLeftPercent){
-													//if there is NO previous letter
-													var addCursorElem=jQuery(this).prev('l:first');
-													if(addCursorElem.length<1){
-														//the clicked letter is the first letter
-														addCursorElem=jQuery(this);
-														//make sure the cursor will appear to the left of the first letter
-														addCursorElem.addClass('before');
+					//if the btn hasn't been removed (if NOT: the btn attribute value text was empty and then the user pressed tab)
+					if(btn.length>0&&btn.parent().length>0){
+						//if there is existing text being modified (should be)
+						var txtElem=btn.children('txt:first');
+						if(txtElem.length>0){
+							//get the input text
+							var txt=txtElem.text(); txt=txt.trim();
+							//if the text is NOT blank
+							if(txt.length>0){
+								//record this previous text, before EDITS are made
+								txtElem[0]['previousText']=txt;
+								//get the original text width, without the <l> markup
+								var txtWidth=txtElem.innerWidth();
+								//add the <l> markup around each letter
+								lettersMarkup(txtElem);
+								//if the mouse actually clicked the button
+								if(btn.hasClass('over')){
+									//if click event is available
+									if(e!=undefined){
+										//figure out which letter to add the cursor to first based on click position
+										var mouseLeft=e.clientX;
+										var txtLeft=txtElem.offset().left;
+										//if the mouse is NOT left of the text's left edge (shouldn't be IF clicked)
+										if(mouseLeft>=txtLeft){
+											//get the mouse position, relative to the text element
+											mouseLeft=mouseLeft-txtLeft;
+											//if the mouse is NOT right of the text's right edge (shouldn't be IF clicked)
+											if(mouseLeft<=txtWidth){
+												//calculate the percentage that the mouse cursor is centered horizontally in the text element
+												var mouseLeftPercent=mouseLeft/txtWidth*100;
+												//for each letter
+												var lettersWidth=0;
+												txtElem.children('l').each(function(){
+													//accumulate the letters width
+													var letterWidth=jQuery(this).outerWidth();
+													lettersWidth+=letterWidth;
+													//calculate current width percent
+													var currentPercent=lettersWidth/txtWidth*100;
+													//if the percent is greater or equal to the cursor position percent
+													if(currentPercent>=mouseLeftPercent){
+														//if there is NO previous letter
+														var addCursorElem=jQuery(this).prev('l:first');
+														if(addCursorElem.length<1){
+															//the clicked letter is the first letter
+															addCursorElem=jQuery(this);
+															//make sure the cursor will appear to the left of the first letter
+															addCursorElem.addClass('before');
+														}
+														//if this isn't already where the cursor is located
+														if(!addCursorElem.hasClass('cursor')){
+															//clear the default cursor class and before class
+															txtElem.children('l.cursor').removeClass('cursor').not(addCursorElem).removeClass('before');
+															//set the cursor on the letter that's closest to the mouse position
+															addCursorElem.addClass('cursor');
+														}
+														//force the letter loop to end
+														return false;
 													}
-													//if this isn't already where the cursor is located
-													if(!addCursorElem.hasClass('cursor')){
-														//clear the default cursor class and before class
-														txtElem.children('l.cursor').removeClass('cursor').not(addCursorElem).removeClass('before');
-														//set the cursor on the letter that's closest to the mouse position
-														addCursorElem.addClass('cursor');
-													}
-													//force the letter loop to end
-													return false;
-												}
-											});
+												});
+											}
 										}
 									}
 								}
-							}
-						}else{
-							//there is no text inside <txt> ...
+							}else{
+								//there is no text inside <txt> ...
 
-							//add the cursor inside this <txt> element
-							txtElem.html('<l class="blank before cursor"></l>');
+								//add the cursor inside this <txt> element
+								txtElem.html('<l class="blank before cursor"></l>');
+							}
+							//add the dynamic events to the new <l>etter elements (if any don't already have evs)
+							evsLetters(txtElem);
 						}
-						//add the dynamic events to the new <l>etter elements (if any don't already have evs)
-						evsLetters(txtElem);
+						//build the <suggest> menu for this button, if there is data AND the <suggest> html isn't already built
+						initSuggestMenu(btn);
+						//open the suggestion menu popup, if conditions are right
+						openSuggestMenu(btn);
 					}
-					//build the <suggest> menu for this button, if there is data AND the <suggest> html isn't already built
-					initSuggestMenu(btn);
-					//open the suggestion menu popup, if conditions are right
-					openSuggestMenu(btn);
 				}
 			};
 			document.body['setBtnFocus']=setBtnFocus;
@@ -1696,30 +1699,30 @@ function updateCode(){
 					return returnBtn;
 				};
 				//return true IF editing <x> element text
-				var isEditNewXElem=function(){
-					var isEditX=false;
+				var getNewXText=function(){
+					var xTxt;
+					//if editing an <x> element
 					if(btnTag=='x'){
 						if(btn.hasClass('focus')){
-							//if text is NOT blank
-							var editTxt=txtElem.text();
-							if(editTxt.length>0){
-								isEditX=true;
-							}
+							//get the user-entered text inside <x><txt>
+							xTxt=txtElem.text();
 						}
 					}
-					return isEditX;
+					return xTxt;
 				};
 				//jump to the previous input field
 				var skipLeft=function(){
 					var prevBtn;
 					//if NOT editing <x> element text
-					if(!isEditNewXElem()){
+					var xTxt=getNewXText();
+					if(xTxt==undefined||xTxt.length<1){
 						//get the next button to skip to
 						prevBtn=getNextPrevBtn('prev');
 						if(prevBtn!=undefined){
 							prevBtn.click();
 						}
 					}else{
+						//editing <x> element text
 						clearFocus();
 					}
 					return prevBtn;
@@ -1728,7 +1731,8 @@ function updateCode(){
 				var skipRight=function(){
 					var nextBtn
 					//if NOT editing <x> element text
-					if(!isEditNewXElem()){
+					var xTxt=getNewXText();
+					if(xTxt==undefined||xTxt.length<1){
 						//get the next button to skip to
 						nextBtn=getNextPrevBtn('next');
 						if(nextBtn!=undefined){
@@ -1739,6 +1743,7 @@ function updateCode(){
 							firstL.addClass('before').addClass('cursor');
 						}
 					}else{
+						//editing <x> element text
 						clearFocus();
 					}
 					return nextBtn;
@@ -1795,8 +1800,10 @@ function updateCode(){
 								if(isCtlKeyHeld(e)){
 									//move to the left btn (like shift+tab)
 									var prevBtn=skipLeft();
-									//get the new <txt> element that has focus
-									focusTxtElem=prevBtn.children('txt:first');
+									if(prevBtn!=undefined){
+										//get the new <txt> element that has focus
+										focusTxtElem=prevBtn.children('txt:first');
+									}else{focusTxtElem=undefined;}
 								}
 							}
 						}
@@ -1809,8 +1816,10 @@ function updateCode(){
 						if(isCtlKeyHeld(e)){
 							//move to the left btn (like shift+tab)
 							var prevBtn=skipLeft();
-							//get the new <txt> element that has focus
-							focusTxtElem=prevBtn.children('txt:first');
+							if(prevBtn!=undefined){
+								//get the new <txt> element that has focus
+								focusTxtElem=prevBtn.children('txt:first');
+							}else{focusTxtElem=undefined;}
 						}
 					}
 					closeSuggestMenu(btn,true);
@@ -1840,8 +1849,10 @@ function updateCode(){
 								if(txtElem.children('l').length<2){
 									//move to the right button (like tab)
 									var nextBtn=skipRight();
-									//get the new <txt> element that has focus
-									focusTxtElem=nextBtn.children('txt:first');
+									if(nextBtn!=undefined){
+										//get the new <txt> element that has focus
+										focusTxtElem=nextBtn.children('txt:first');
+									}else{focusTxtElem=undefined;}
 								}else{
 									//more than just one empty letter in this field...
 
@@ -1890,8 +1901,10 @@ function updateCode(){
 							if(isCtlKeyHeld(e)){
 								//move to the right button (like tab)
 								var nextBtn=skipRight();
-								//get the new <txt> element that has focus
-								focusTxtElem=nextBtn.children('txt:first');
+								if(nextBtn!=undefined){
+									//get the new <txt> element that has focus
+									focusTxtElem=nextBtn.children('txt:first');
+								}else{focusTxtElem=undefined;}
 							}
 						}
 					}
@@ -2186,7 +2199,7 @@ function updateCode(){
 							if(txtElem.length<1){
 								btn.prepend('<txt></txt>');
 								txtElem=btn.children('txt:first');
-							}//txtElem.html('');
+							}
 							//finish setting the cursor focus for this empty <txt> element
 							setBtnFocus(btn,e);
 						}
