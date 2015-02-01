@@ -20,12 +20,13 @@
 #code txt{vertical-align:middle;display:inline;}
 #code input{color:transparent;opacity:0;position:fixed;left:-9999px;top:-9999px;max-width:100px;max-height:25px;border:none;outline:none;}
 #code x{display:block;height:.4em;cursor:pointer;border-radius:1em;position:relative;}
-#code suggest{display:none;opacity:0;position:absolute;top:100%;left:0;overflow:auto;border:solid .1em #ccc;box-shadow:-.1em .1em .2em rgba(0,0,0,.1);background-color:#fff;z-index:9999;
-  -webkit-transition:opacity .2s linear;-moz-transition:opacity .2s linear;-ms-transition:opacity .2s linear;-o-transition:opacity .2s linear;transition:opacity .2s linear;}
-#code .focus suggest{display:block;}
-#code .active suggest{display:block;}
+#code suggest{max-width:0;max-height:0;overflow:hidden;display:block;opacity:0;position:absolute;top:100%;left:0;border:solid .1em #ccc;box-shadow:-.1em .1em .2em rgba(0,0,0,.1);background-color:#fff;z-index:9999;
+  -webkit-transition:opacity .2s linear,max-width .2s linear,max-height .2s linear;-moz-transition:opacity .2s linear,max-width .2s linear,max-height .2s linear;-ms-transition:opacity .2s linear,max-width .2s linear,max-height .2s linear;-o-transition:opacity .2s linear,max-width .2s linear,max-height .2s linear;transition:opacity .2s linear,max-width .2s linear,max-height .2s linear;}
+#code .active suggest{max-width:20em;min-width:10em;max-height:20em;}
 #code .active.focus suggest{opacity:1;}
+#code .active.focus suggest.opened{overflow:auto;}
 #code suggest it{display:block;padding:.1em .5em;font-size:97%;color:#000;white-space:nowrap;cursor:pointer;}
+#code suggest it.exclude{display:none;}
 #code suggest it[itype="child_elem"]{color:#881280;}
 #code suggest it[itype="child_text"]{color:#236e25;}
 #code suggest it[itype="child_text"][val="text"]{color:#000;font-style:italic;}
@@ -49,7 +50,7 @@
 #code g.opened > oc:after{border-top-color:#6e6e6e;border-top-width:.65em;}
 #code g.empty > oc{display:none;}
 #code g.closed > g{display:none;}
-#code e{color:#881280;display:inline-block;vertical-align:middle;}
+#code e{color:#881280;display:inline-block;vertical-align:middle;white-space:nowrap;}
 #code e > n,#code e > kv k,#code e > kv v{cursor:pointer;border-radius:1em;position:relative;}
 #code e space{display:none;}
 #code e kv{}

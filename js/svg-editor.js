@@ -333,6 +333,7 @@ function updateCode(){
 			var btnElems=clickEditElems.parent();
 			//function to clear the current focus
 			var clearFocus=function(keepFocusBtn){
+				console.log('start clearFocus');
 				var anyChanges=false;
 				//if there are any elements with "blank-txt" then remove these elements
 				var blankTxtElems=codeElem.find('.blank-txt');
@@ -340,22 +341,28 @@ function updateCode(){
 					//for each blank txt element
 					blankTxtElems.each(function(){
 						var blankTxtElem=jQuery(this);
-						//NOTE: the blank txt element will either be <g> or <kv>
-						var xNextElem=blankTxtElem.next('x:first');
-						//if the <x> button, after blankTxtElem, is the last one
-						if(xNextElem.hasClass('last')){
-							//this xNextElem, will no longer be the last...
-							var xPrevElem=blankTxtElem.prev('x:first');
-							//the previous <x> element will be last instead
-							xNextElem.removeClass('last');
-							xPrevElem.addClass('last');
+						//if NOT a NEW element <x> button
+						if(blankTxtElem[0].tagName.toLowerCase()!='x'){
+							//NOTE: the blank txt element will either be <g> or <kv>
+							var xNextElem=blankTxtElem.next('x:first');
+							//if the <x> button, after blankTxtElem, is the last one
+							if(xNextElem.hasClass('last')){
+								//this xNextElem, will no longer be the last...
+								var xPrevElem=blankTxtElem.prev('x:first');
+								//the previous <x> element will be last instead
+								xNextElem.removeClass('last');
+								xPrevElem.addClass('last');
+							}
+							//remove the <x> element after blankTxtElem
+							xNextElem.remove();
+							//remove blankTxtElem
+							blankTxtElem.remove();
+							//changes made
+							anyChanges=true;
+						}else{
+							//blankTxtElem is <x>...
+							blankTxtElem.removeClass('blank-txt');
 						}
-						//remove the <x> element after blankTxtElem
-						xNextElem.remove();
-						//remove blankTxtElem
-						blankTxtElem.remove();
-						//changes made
-						anyChanges=true;
 					});
 				}
 				//if there are any buttons with focus
@@ -476,6 +483,7 @@ function updateCode(){
 					//refresh the design view
 					//***
 				}
+				console.log('end clearFocus');
 			};
 			//function to create the markup for one letter
 			var gLetterMarkup=function(letterStr,json){
@@ -634,38 +642,41 @@ function updateCode(){
 				});
 				//click
 				lElems.click(function(e){
-					//move the cursor to the clicked element
-					var txtParent=jQuery(this).parent();
-					//get the cursor position and the right and left edges of the letter
-					var letterLeft=jQuery(this).offset().left;
-					var letterRight=letterLeft+jQuery(this).outerWidth();
-					var mouseLeft=e.clientX;
-					//get the difference between cursor position and LEFT edge of the letter
-					var leftDifference=-1;
-					if(mouseLeft>letterLeft){leftDifference=mouseLeft-letterLeft;}
-					else{leftDifference=letterLeft-mouseLeft;}
-					//get the difference between cursor position and RIGHT edge of the letter
-					var rightDifference=-1;
-					if(mouseLeft>letterRight){rightDifference=mouseLeft-letterRight;}
-					else{rightDifference=letterRight-mouseLeft;}
-					//remove the previous cursor position
-					txtParent.children('.cursor').removeClass('cursor');
-					txtParent.children('.before').removeClass('before');
-					//which edge is the cursor closer to?
-					var cursorLElem=jQuery(this);
-					//if closer to the left edge
-					if(leftDifference<rightDifference){
-						//if there is an element BEFORE this element
-						var prevLElem=jQuery(this).prev('l:first');
-						if(prevLElem.length>0){
-							cursorLElem=prevLElem;
-						}else{
-							//this is already the first letter element
-							cursorLElem.addClass('before');
+					//if the clicked letter was NOT a blank placeholder for empty text
+					if(!jQuery(this).hasClass('blank')){
+						//move the cursor to the clicked element
+						var txtParent=jQuery(this).parent();
+						//get the cursor position and the right and left edges of the letter
+						var letterLeft=jQuery(this).offset().left;
+						var letterRight=letterLeft+jQuery(this).outerWidth();
+						var mouseLeft=e.clientX;
+						//get the difference between cursor position and LEFT edge of the letter
+						var leftDifference=-1;
+						if(mouseLeft>letterLeft){leftDifference=mouseLeft-letterLeft;}
+						else{leftDifference=letterLeft-mouseLeft;}
+						//get the difference between cursor position and RIGHT edge of the letter
+						var rightDifference=-1;
+						if(mouseLeft>letterRight){rightDifference=mouseLeft-letterRight;}
+						else{rightDifference=letterRight-mouseLeft;}
+						//remove the previous cursor position
+						txtParent.children('.cursor').removeClass('cursor');
+						txtParent.children('.before').removeClass('before');
+						//which edge is the cursor closer to?
+						var cursorLElem=jQuery(this);
+						//if closer to the left edge
+						if(leftDifference<rightDifference){
+							//if there is an element BEFORE this element
+							var prevLElem=jQuery(this).prev('l:first');
+							if(prevLElem.length>0){
+								cursorLElem=prevLElem;
+							}else{
+								//this is already the first letter element
+								cursorLElem.addClass('before');
+							}
 						}
+						//add the new cursor position
+						cursorLElem.addClass('cursor');
 					}
-					//add the new cursor position
-					cursorLElem.addClass('cursor');
 				});
 			};
 			//function to close the suggestion popup
@@ -688,10 +699,12 @@ function updateCode(){
 					}
 					//if should close the menu
 					if(doClose||closeWhileOpen){
+						menuBtn.children('suggest:last').removeClass('opened');
 						//give the fade css transition time to play
 						setTimeout(function(){
 							//if still doesn't have focus
 							if(!menuBtn.hasClass('focus')||closeWhileOpen){
+								//remove active class
 								menuBtn.removeClass('active');
 							}
 						},200);
@@ -767,6 +780,13 @@ function updateCode(){
 									if(menuBtn.hasClass('focus')){
 										//show the suggest menu
 										menuBtn.addClass('active');
+										setTimeout(function(){
+											//if the suggest menu is still active
+											if(menuBtn.hasClass('active')){
+												//set the opened class
+												menuBtn.children('suggest:last').addClass('opened');
+											}
+										},200);
 									}
 								},100);
 							}
@@ -998,6 +1018,61 @@ function updateCode(){
 					}
 				}
 			};
+			//filter the <suggest> items based on user-written text
+			var filterSuggestItems=function(txtElem){
+				//if there IS a <suggest> menu
+				var menuBtn=txtElem.parent();
+				var suggestMenu=menuBtn.children('suggest:last');
+				if(suggestMenu.length>0){
+					//if the suggest menu is active
+					if(menuBtn.hasClass('active')){
+						//get the user-written text
+						var txtVal=txtElem.text();
+						//if the user's text is NOT blank
+						if(txtVal.length>0){
+							txtVal=txtVal.toLowerCase();
+							//remove the selected <it>em class
+							suggestMenu.children('it.sel').removeClass('sel');
+							//for each <suggest> <it>em
+							var numIncluded=0; var lastIncluded;
+							suggestMenu.children('it').each(function(){
+								var itElem=jQuery(this);
+								var itVal=itElem.attr('val'); itVal=itVal.toLowerCase();
+								//if this <it>em starts with the user-entered text
+								if(itVal.indexOf(txtVal)==0){
+									//make sure the item is NOT excluded
+									itElem.removeClass('exclude');
+									numIncluded++; lastIncluded=itElem;
+									//if this is an exact match
+									if(itVal==txtVal){
+										//select this item
+										itElem.addClass('sel');
+									}
+								}else{
+									//this <it>em does NOT start with the user-entered text...
+
+									//this item should be excluded
+									itElem.addClass('exclude');
+								}
+							});
+							//if there is only ONE included item
+							if(numIncluded==1){
+								//select the ONLY included item
+								lastIncluded.addClass('sel');
+							}
+						}else{
+							//the user's text IS blank...
+
+							//no <suggest> <it>em should be excluded
+							suggestMenu.children('it.exclude').removeClass('exclude');
+							//remove the selection from all <it>em
+							suggestMenu.children('it.sel').not('.default').removeClass('sel');
+							//the default <it>em should be selected
+							suggestMenu.children('it.default:first').addClass('sel');
+						}
+					}
+				}
+			};
 			//set the selected text in the hidden <input> element so that Ctl+C will copy the selected
 			var inputSelectedTxt=function(txtElem){
 				//if the txtElem exists
@@ -1194,6 +1269,8 @@ function updateCode(){
 									}
 									//add the dynamic events to the new <l>etter elements
 									evsLetters(txtElem);
+									//if there is a <suggest> menu open, then filter the suggest items based on typed text
+									filterSuggestItems(txtElem);
 								}
 							}
 						}
@@ -1248,6 +1325,10 @@ function updateCode(){
 							didDelSel=true;
 						}
 					}
+					if(didDelSel){
+						//filter out <suggest> items that don't match user-entered text
+						filterSuggestItems(txtElem);
+					}
 					return didDelSel;
 				};
 				var backSpaceLetter=function(){
@@ -1283,6 +1364,8 @@ function updateCode(){
 								}
 								//remove this letter (backspace)
 								cursorElem.remove();
+								//filter out <suggest> items that don't match user-entered text
+								filterSuggestItems(txtElem);
 							}
 						}
 					}
@@ -1318,6 +1401,8 @@ function updateCode(){
 									delElem.remove();
 								}
 							}
+							//filter out <suggest> items that don't match user-entered text
+							filterSuggestItems(txtElem);
 						}
 					}
 				};
@@ -1667,8 +1752,8 @@ function updateCode(){
 								if(selIt.length<1){
 									//depending on arrow up/down...
 									switch(upOrDown){
-										case 'down': selIt=sugWrap.children('it:first'); break; //get the FIRST <it>em by default
-										case 'up': selIt=sugWrap.children('it:last'); break; //get the LAST <it>em by default
+										case 'down': selIt=sugWrap.children('it').not('.exclude').filter(':first'); break; //get the FIRST <it>em by default
+										case 'up': selIt=sugWrap.children('it').not('.exclude').filter(':last'); break; //get the LAST <it>em by default
 									}
 								}
 								//if there is any <it>em in the <suggest> menu
@@ -1678,8 +1763,12 @@ function updateCode(){
 										var newIt;
 										//depending on arrow up/down...
 										switch(upOrDown){
-											case 'down': newIt=selIt.next('it:first'); break; //get the FIRST <it>em by default
-											case 'up': newIt=selIt.prev('it:first'); break; //get the LAST <it>em by default
+											case 'down': //get the FIRST <it>em by default
+												newIt=selIt.next('it:first');
+												break;
+											case 'up': //get the LAST <it>em by default
+												newIt=selIt.prev('it:first');
+												break;
 										}
 										//select the next/prev item
 										selectSuggestItem(sugWrap,newIt);
@@ -1844,8 +1933,6 @@ function updateCode(){
 									if(e.shiftKey!=undefined&&e.shiftKey){
 										//before keyup... delete selected letters, if any
 										deleteSelectedLetters();
-										//close suggest menu
-										closeSuggestMenu(btn,true);
 										//allow keyup (capital letters)
 										ignoreKeyup=false;
 									}
@@ -2020,7 +2107,7 @@ function updateCode(){
 						if(txtElem.length<1){
 							btn.prepend('<txt></txt>');
 							txtElem=btn.children('txt:first');
-						}txtElem.html('');
+						}//txtElem.html('');
 						//finish setting the cursor focus for this empty <txt> element
 						setBtnFocus();
 					}
