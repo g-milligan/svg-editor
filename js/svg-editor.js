@@ -523,25 +523,28 @@ function updateCode(){
 			};
 			//add the letters markup into <txt>.text() if no <l>etters are already there
 			var lettersMarkup=function(txtElem){
-				var txt=txtElem.text();
-				//if the .text() is the same as .html()... if no <l>etter markup
-				if(txt==txtElem.html()){
-					txt=txt.trim();
-					//split up each character
-					var letterArray=txt.split('');txt='';
-					//for each character
-					for(var l=0;l<letterArray.length;l++){
-						//if last letter... then add cursor class
-						var json={};
-						if(l==letterArray.length-1){json['cursorClass']='cursor'}
-						//get the letter's markup
-						var letter=letterArray[l];
-						txt+=gLetterMarkup(letter,json);
+				if(txtElem!=undefined){
+					if(txtElem.length>0){
+						//if no <l>etter markup
+						if(txtElem.html().indexOf('<l')==-1){
+							var txt=txtElem.text(); txt=txt.trim();
+							//split up each character
+							var letterArray=txt.split('');txt='';
+							//for each character
+							for(var l=0;l<letterArray.length;l++){
+								//if last letter... then add cursor class
+								var json={};
+								if(l==letterArray.length-1){json['cursorClass']='cursor'}
+								//get the letter's markup
+								var letter=letterArray[l];
+								txt+=gLetterMarkup(letter,json);
+							}
+							//set the letters surrounded by <l> updated text html
+							txtElem.html(txt);
+							//set the <l> events
+							evsLetters(txtElem);
+						}
 					}
-					//set the letters surrounded by <l> updated text html
-					txtElem.html(txt);
-					//set the <l> events
-					evsLetters(txtElem);
 				}
 			};
 			//set the selected text in the hidden <input> element so that Ctl+C will copy the selected
@@ -709,7 +712,11 @@ function updateCode(){
 													//set the cursor in the new v element and select all of the new text
 													selectAllTxt(newVElem.children('txt:first'));
 													//if the <v> value is starting blank, with no default value
-													if(attrVal.length<1){newKvElem.addClass('blank-txt');}
+													if(attrVal.length<1){
+														newKvElem.addClass('blank-txt');
+														//don't set changes yet (not until the attribute value gains text, then loses focus)
+														anyChanges=false;
+													}
 													break;
 												default: //create new ELEMENT
 													//get the suggest json for children, of this parent node name
@@ -875,18 +882,21 @@ function updateCode(){
 					//if there is a <suggest> element
 					var sugWrap=menuBtn.children('suggest:last');
 					if(sugWrap.length>0){
-						//if there is a selected <it> under <suggest>
-						var selIt=sugWrap.children('it.sel:first');
-						if(selIt.length>0){
-							//if there is a value for this suggested item
-							var selVal=selIt.attr('val');
-							if(selVal==undefined){selVal='';}
-							//set the selected value
-							menuBtn.children('txt:first').text(selVal);
-							//clear the focus to enter this value
-							clearFocus();
-							//indicate that value was set
-							didSet=true;
+						//if NOT exclude all
+						if(!sugWrap.hasClass('exclude-all')){
+							//if there is a selected <it> under <suggest>
+							var selIt=sugWrap.children('it.sel:first');
+							if(selIt.length>0){
+								//if there is a value for this suggested item
+								var selVal=selIt.attr('val');
+								if(selVal==undefined){selVal='';}
+								//set the selected value
+								menuBtn.children('txt:first').text(selVal);
+								//clear the focus to enter this value
+								clearFocus();
+								//indicate that value was set
+								didSet=true;
+							}
 						}
 						//close the suggest menu
 						closeSuggestMenu(menuBtn,true);
@@ -1684,24 +1694,52 @@ function updateCode(){
 							break;
 					}
 					return returnBtn;
-				}
+				};
+				//return true IF editing <x> element text
+				var isEditNewXElem=function(){
+					var isEditX=false;
+					if(btnTag=='x'){
+						if(btn.hasClass('focus')){
+							//if text is NOT blank
+							var editTxt=txtElem.text();
+							if(editTxt.length>0){
+								isEditX=true;
+							}
+						}
+					}
+					return isEditX;
+				};
 				//jump to the previous input field
 				var skipLeft=function(){
-					var prevBtn=getNextPrevBtn('prev');
-					if(prevBtn!=undefined){
-						prevBtn.click();
+					var prevBtn;
+					//if NOT editing <x> element text
+					if(!isEditNewXElem()){
+						//get the next button to skip to
+						prevBtn=getNextPrevBtn('prev');
+						if(prevBtn!=undefined){
+							prevBtn.click();
+						}
+					}else{
+						clearFocus();
 					}
 					return prevBtn;
 				};
 				//jump to the next input field
 				var skipRight=function(){
-					var nextBtn=getNextPrevBtn('next');
-					if(nextBtn!=undefined){
-						nextBtn.click();
-						//put the cursor at the start
-						var firstL=nextBtn.find('txt l:first');
-						nextBtn.find('txt l.cursor').not(firstL).removeClass('cursor');
-						firstL.addClass('before').addClass('cursor');
+					var nextBtn
+					//if NOT editing <x> element text
+					if(!isEditNewXElem()){
+						//get the next button to skip to
+						nextBtn=getNextPrevBtn('next');
+						if(nextBtn!=undefined){
+							nextBtn.click();
+							//put the cursor at the start
+							var firstL=nextBtn.find('txt l:first');
+							nextBtn.find('txt l.cursor').not(firstL).removeClass('cursor');
+							firstL.addClass('before').addClass('cursor');
+						}
+					}else{
+						clearFocus();
 					}
 					return nextBtn;
 				};
