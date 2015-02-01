@@ -793,20 +793,28 @@ function updateCode(){
 									itElem.addClass('exclude');
 								}
 							});
-							//if there is only ONE included item
-							if(numIncluded==1){
-								//select the ONLY included item
-								lastIncluded.addClass('sel');
+							//depending on the number of included <it>ems...
+							switch(numIncluded){
+								case 0: //ZERO filtered <it>ems
+									suggestMenu.addClass('exclude-all');
+									break;
+								case 1: //only ONE filtered <it>em
+									//select the ONLY included item
+									lastIncluded.addClass('sel');
+									suggestMenu.removeClass('exclude-all');
+									break;
+								default: //MORE than ONE filtered <it>em
+									suggestMenu.removeClass('exclude-all');
+									break;
 							}
 						}else{
 							//the user's text IS blank...
 
 							//no <suggest> <it>em should be excluded
 							suggestMenu.children('it.exclude').removeClass('exclude');
+							suggestMenu.removeClass('exclude-all');
 							//remove the selection from all <it>em
-							suggestMenu.children('it.sel').not('.default').removeClass('sel');
-							//the default <it>em should be selected
-							suggestMenu.children('it.default:first').addClass('sel');
+							suggestMenu.children('it.sel').removeClass('sel');
 						}
 					}
 				}
@@ -1070,6 +1078,9 @@ function updateCode(){
 						itElems.addClass('evs');
 						//click on suggested item element
 						itElems.click(function(){
+							//ignore the click event that bubbles up to the btn
+							menuBtn.addClass('ignore-click');
+							//select the clicked item
 							selectSuggestItem(suggestWrap,jQuery(this),true);
 						});
 					}
@@ -1967,158 +1978,166 @@ function updateCode(){
 			//click event
 			btnElems.click(function(e){
 				var btn=jQuery(this);
-				var btnTag=btn[0].tagName.toLowerCase();
-				//set the focus of this hidden <input> (make sure it's set)
-				var focusInput=btn.children('input:last');
-				focusInput.focus();
-				//function to set the focus on the clicked btn element
-				var setBtnFocus=function(){
-					//if NOT already has focus
-					if(!btn.hasClass('focus')){
-						//set the focus class of this element
-						btn.addClass('focus');
-						//clear previous focus (but keep focus on btn)
-						clearFocus(btn);
-						//if there is existing text being modified (should be)
-						var txtElem=btn.children('txt:first');
-						if(txtElem.length>0){
-							//get the input text
-							var txt=txtElem.text(); txt=txt.trim();
-							//if the text is NOT blank
-							if(txt.length>0){
-								//record this previous text, before EDITS are made
-								txtElem[0]['previousText']=txt;
-								//split up each character
-								var letterArray=txt.split('');txt='';
-								//for each character
-								for(var l=0;l<letterArray.length;l++){
-									//if last letter... then add cursor class
-									var json={};
-									if(l==letterArray.length-1){json['cursorClass']='cursor'}
-									//get the letter's markup
-									var letter=letterArray[l];
-									txt+=gLetterMarkup(letter,json);
-								}
-								//get the original text width
-								var txtWidth=txtElem.innerWidth();
-								//set the letters surrounded by <l> updated text html
-								txtElem.html(txt);
-								//if the mouse actually clicked the button
-								if(btn.hasClass('over')){
-									//figure out which letter to add the cursor to first based on click position
-									var mouseLeft=e.clientX;
-									var txtLeft=txtElem.offset().left;
-									//if the mouse is NOT left of the text's left edge (shouldn't be IF clicked)
-									if(mouseLeft>=txtLeft){
-										//get the mouse position, relative to the text element
-										mouseLeft=mouseLeft-txtLeft;
-										//if the mouse is NOT right of the text's right edge (shouldn't be IF clicked)
-										if(mouseLeft<=txtWidth){
-											//calculate the percentage that the mouse cursor is centered horizontally in the text element
-											var mouseLeftPercent=mouseLeft/txtWidth*100;
-											//for each letter
-											var lettersWidth=0;
-											txtElem.children('l').each(function(){
-												//accumulate the letters width
-												var letterWidth=jQuery(this).outerWidth();
-												lettersWidth+=letterWidth;
-												//calculate current width percent
-												var currentPercent=lettersWidth/txtWidth*100;
-												//if the percent is greater or equal to the cursor position percent
-												if(currentPercent>=mouseLeftPercent){
-													//if there is NO previous letter
-													var addCursorElem=jQuery(this).prev('l:first');
-													if(addCursorElem.length<1){
-														//the clicked letter is the first letter
-														addCursorElem=jQuery(this);
-														//make sure the cursor will appear to the left of the first letter
-														addCursorElem.addClass('before');
+				//if NOT ignoring this click
+				if(!btn.hasClass('ignore-click')){
+					var btnTag=btn[0].tagName.toLowerCase();
+					//set the focus of this hidden <input> (make sure it's set)
+					var focusInput=btn.children('input:last');
+					focusInput.focus();
+					//function to set the focus on the clicked btn element
+					var setBtnFocus=function(){
+						//if NOT already has focus
+						if(!btn.hasClass('focus')){
+							//set the focus class of this element
+							btn.addClass('focus');
+							//clear previous focus (but keep focus on btn)
+							clearFocus(btn);
+							//if there is existing text being modified (should be)
+							var txtElem=btn.children('txt:first');
+							if(txtElem.length>0){
+								//get the input text
+								var txt=txtElem.text(); txt=txt.trim();
+								//if the text is NOT blank
+								if(txt.length>0){
+									//record this previous text, before EDITS are made
+									txtElem[0]['previousText']=txt;
+									//split up each character
+									var letterArray=txt.split('');txt='';
+									//for each character
+									for(var l=0;l<letterArray.length;l++){
+										//if last letter... then add cursor class
+										var json={};
+										if(l==letterArray.length-1){json['cursorClass']='cursor'}
+										//get the letter's markup
+										var letter=letterArray[l];
+										txt+=gLetterMarkup(letter,json);
+									}
+									//get the original text width
+									var txtWidth=txtElem.innerWidth();
+									//set the letters surrounded by <l> updated text html
+									txtElem.html(txt);
+									//if the mouse actually clicked the button
+									if(btn.hasClass('over')){
+										//figure out which letter to add the cursor to first based on click position
+										var mouseLeft=e.clientX;
+										var txtLeft=txtElem.offset().left;
+										//if the mouse is NOT left of the text's left edge (shouldn't be IF clicked)
+										if(mouseLeft>=txtLeft){
+											//get the mouse position, relative to the text element
+											mouseLeft=mouseLeft-txtLeft;
+											//if the mouse is NOT right of the text's right edge (shouldn't be IF clicked)
+											if(mouseLeft<=txtWidth){
+												//calculate the percentage that the mouse cursor is centered horizontally in the text element
+												var mouseLeftPercent=mouseLeft/txtWidth*100;
+												//for each letter
+												var lettersWidth=0;
+												txtElem.children('l').each(function(){
+													//accumulate the letters width
+													var letterWidth=jQuery(this).outerWidth();
+													lettersWidth+=letterWidth;
+													//calculate current width percent
+													var currentPercent=lettersWidth/txtWidth*100;
+													//if the percent is greater or equal to the cursor position percent
+													if(currentPercent>=mouseLeftPercent){
+														//if there is NO previous letter
+														var addCursorElem=jQuery(this).prev('l:first');
+														if(addCursorElem.length<1){
+															//the clicked letter is the first letter
+															addCursorElem=jQuery(this);
+															//make sure the cursor will appear to the left of the first letter
+															addCursorElem.addClass('before');
+														}
+														//if this isn't already where the cursor is located
+														if(!addCursorElem.hasClass('cursor')){
+															//clear the default cursor class and before class
+															txtElem.children('l.cursor').removeClass('cursor').not(addCursorElem).removeClass('before');
+															//set the cursor on the letter that's closest to the mouse position
+															addCursorElem.addClass('cursor');
+														}
+														//force the letter loop to end
+														return false;
 													}
-													//if this isn't already where the cursor is located
-													if(!addCursorElem.hasClass('cursor')){
-														//clear the default cursor class and before class
-														txtElem.children('l.cursor').removeClass('cursor').not(addCursorElem).removeClass('before');
-														//set the cursor on the letter that's closest to the mouse position
-														addCursorElem.addClass('cursor');
-													}
-													//force the letter loop to end
-													return false;
-												}
-											});
+												});
+											}
 										}
 									}
-								}
-							}else{
-								//there is no text inside <txt> ...
+								}else{
+									//there is no text inside <txt> ...
 
-								//add the cursor inside this <txt> element
-								txtElem.html('<l class="blank before cursor"></l>');
+									//add the cursor inside this <txt> element
+									txtElem.html('<l class="blank before cursor"></l>');
+								}
+								//add the dynamic events to the new <l>etter elements
+								evsLetters(txtElem);
 							}
-							//add the dynamic events to the new <l>etter elements
-							evsLetters(txtElem);
+							//build the <suggest> menu for this button, if there is data AND the <suggest> html isn't already built
+							initSuggestMenu(btn);
+							//open the suggestion menu popup, if conditions are right
+							openSuggestMenu(btn);
 						}
-						//build the <suggest> menu for this button, if there is data AND the <suggest> html isn't already built
-						initSuggestMenu(btn);
-						//open the suggestion menu popup, if conditions are right
-						openSuggestMenu(btn);
-					}
-				};
-				//if NOT an <x> btn element
-				if(btnTag!='x'){
-					//if NOT already has double click class
-					var isDblClick=false;
-					if(!btn.hasClass('dbl-click')){
-						//add dble click class... then remove the class after a delay
-						btn.addClass('dbl-click');
-						setTimeout(function(){btn.removeClass('dbl-click')},185);
+					};
+					//if NOT an <x> btn element
+					if(btnTag!='x'){
+						//if NOT already has double click class
+						var isDblClick=false;
+						if(!btn.hasClass('dbl-click')){
+							//add dble click class... then remove the class after a delay
+							btn.addClass('dbl-click');
+							setTimeout(function(){btn.removeClass('dbl-click')},185);
+						}else{
+							//already has dbl-click class...
+							isDblClick=true;
+							//select all of the text in <txt>, if <txt> element exists
+							var txtElem=btn.children('txt:first');
+							selectAllTxt(txtElem);
+							//open the suggestion menu popup
+							openSuggestMenu(btn,true);
+							//remove double click class now instead of waiting for timer
+							btn.removeClass('dbl-click');
+						}
+						//if NOT double clicked
+						if(!isDblClick){
+							//finish setting the clicked button's focus
+							setBtnFocus();
+						}
 					}else{
-						//already has dbl-click class...
-						isDblClick=true;
-						//select all of the text in <txt>, if <txt> element exists
-						var txtElem=btn.children('txt:first');
-						selectAllTxt(txtElem);
-						//open the suggestion menu popup
-						openSuggestMenu(btn,true);
-						//remove double click class now instead of waiting for timer
-						btn.removeClass('dbl-click');
-					}
-					//if NOT double clicked
-					if(!isDblClick){
-						//finish setting the clicked button's focus
-						setBtnFocus();
+						//clicked on an <x> btn to create a new node...
+
+						//get parent element of <x>
+						var suggestCode=true;
+						var xParent=btn.parent();
+						//get the <x> type (attribute OR node?)
+						var xType=xParent[0].tagName.toLowerCase();
+						//if <g>roup node
+						if(xType=='g'){
+							//if this group is currently closed
+							if(xParent.hasClass('closed')){
+								//get the open/close button if it exists
+								var ocBtn=xParent.children('oc:first');
+								if(ocBtn.length>0){
+									//open this group instead of suggesting code
+									ocBtn.click();
+									suggestCode=false;
+								}
+							}
+						}
+						//if a code suggestion is needed (if so, then user can enter text)
+						if(suggestCode){
+							//create a <txt> element, IF doesn't exist yet
+							var txtElem=btn.children('txt:first');
+							if(txtElem.length<1){
+								btn.prepend('<txt></txt>');
+								txtElem=btn.children('txt:first');
+							}//txtElem.html('');
+							//finish setting the cursor focus for this empty <txt> element
+							setBtnFocus();
+						}
 					}
 				}else{
-					//clicked on an <x> btn to create a new node...
+					//click ignored...
 
-					//get parent element of <x>
-					var suggestCode=true;
-					var xParent=btn.parent();
-					//get the <x> type (attribute OR node?)
-					var xType=xParent[0].tagName.toLowerCase();
-					//if <g>roup node
-					if(xType=='g'){
-						//if this group is currently closed
-						if(xParent.hasClass('closed')){
-							//get the open/close button if it exists
-							var ocBtn=xParent.children('oc:first');
-							if(ocBtn.length>0){
-								//open this group instead of suggesting code
-								ocBtn.click();
-								suggestCode=false;
-							}
-						}
-					}
-					//if a code suggestion is needed (if so, then user can enter text)
-					if(suggestCode){
-						//create a <txt> element, IF doesn't exist yet
-						var txtElem=btn.children('txt:first');
-						if(txtElem.length<1){
-							btn.prepend('<txt></txt>');
-							txtElem=btn.children('txt:first');
-						}//txtElem.html('');
-						//finish setting the cursor focus for this empty <txt> element
-						setBtnFocus();
-					}
+					//remove ignore-click class
+					btn.removeClass('ignore-click');
 				}
 			});
 		};
