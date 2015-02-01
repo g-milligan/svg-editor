@@ -756,6 +756,61 @@ function updateCode(){
 					if(doSet){setSuggestItem(sugWrap.parent());}
 				}
 			};
+			//filter the <suggest> items based on user-written text
+			var filterSuggestItems=function(txtElem){
+				//if there IS a <suggest> menu
+				var menuBtn=txtElem.parent();
+				var suggestMenu=menuBtn.children('suggest:last');
+				if(suggestMenu.length>0){
+					//if the suggest menu is active
+					if(menuBtn.hasClass('active')){
+						//get the user-written text
+						var txtVal=txtElem.text();
+						//if the user's text is NOT blank
+						if(txtVal.length>0){
+							txtVal=txtVal.toLowerCase();
+							//remove the selected <it>em class
+							suggestMenu.children('it.sel').removeClass('sel');
+							//for each <suggest> <it>em
+							var numIncluded=0; var lastIncluded;
+							suggestMenu.children('it').each(function(){
+								var itElem=jQuery(this);
+								var itVal=itElem.attr('val'); itVal=itVal.toLowerCase();
+								//if this <it>em starts with the user-entered text
+								if(itVal.indexOf(txtVal)==0){
+									//make sure the item is NOT excluded
+									itElem.removeClass('exclude');
+									numIncluded++; lastIncluded=itElem;
+									//if this is an exact match
+									if(itVal==txtVal){
+										//select this item
+										itElem.addClass('sel');
+									}
+								}else{
+									//this <it>em does NOT start with the user-entered text...
+
+									//this item should be excluded
+									itElem.addClass('exclude');
+								}
+							});
+							//if there is only ONE included item
+							if(numIncluded==1){
+								//select the ONLY included item
+								lastIncluded.addClass('sel');
+							}
+						}else{
+							//the user's text IS blank...
+
+							//no <suggest> <it>em should be excluded
+							suggestMenu.children('it.exclude').removeClass('exclude');
+							//remove the selection from all <it>em
+							suggestMenu.children('it.sel').not('.default').removeClass('sel');
+							//the default <it>em should be selected
+							suggestMenu.children('it.default:first').addClass('sel');
+						}
+					}
+				}
+			};
 			//function to show the suggestion popup
 			var openSuggestMenu=function(menuBtn,doOpen){
 				//if the suggestion menu is NOT already active
@@ -780,6 +835,8 @@ function updateCode(){
 									if(menuBtn.hasClass('focus')){
 										//show the suggest menu
 										menuBtn.addClass('active');
+										//make sure the filtering is correct in the <suggest> menu, depending on text
+										filterSuggestItems(menuBtn.children('txt:first'));
 										setTimeout(function(){
 											//if the suggest menu is still active
 											if(menuBtn.hasClass('active')){
@@ -1015,61 +1072,6 @@ function updateCode(){
 						itElems.click(function(){
 							selectSuggestItem(suggestWrap,jQuery(this),true);
 						});
-					}
-				}
-			};
-			//filter the <suggest> items based on user-written text
-			var filterSuggestItems=function(txtElem){
-				//if there IS a <suggest> menu
-				var menuBtn=txtElem.parent();
-				var suggestMenu=menuBtn.children('suggest:last');
-				if(suggestMenu.length>0){
-					//if the suggest menu is active
-					if(menuBtn.hasClass('active')){
-						//get the user-written text
-						var txtVal=txtElem.text();
-						//if the user's text is NOT blank
-						if(txtVal.length>0){
-							txtVal=txtVal.toLowerCase();
-							//remove the selected <it>em class
-							suggestMenu.children('it.sel').removeClass('sel');
-							//for each <suggest> <it>em
-							var numIncluded=0; var lastIncluded;
-							suggestMenu.children('it').each(function(){
-								var itElem=jQuery(this);
-								var itVal=itElem.attr('val'); itVal=itVal.toLowerCase();
-								//if this <it>em starts with the user-entered text
-								if(itVal.indexOf(txtVal)==0){
-									//make sure the item is NOT excluded
-									itElem.removeClass('exclude');
-									numIncluded++; lastIncluded=itElem;
-									//if this is an exact match
-									if(itVal==txtVal){
-										//select this item
-										itElem.addClass('sel');
-									}
-								}else{
-									//this <it>em does NOT start with the user-entered text...
-
-									//this item should be excluded
-									itElem.addClass('exclude');
-								}
-							});
-							//if there is only ONE included item
-							if(numIncluded==1){
-								//select the ONLY included item
-								lastIncluded.addClass('sel');
-							}
-						}else{
-							//the user's text IS blank...
-
-							//no <suggest> <it>em should be excluded
-							suggestMenu.children('it.exclude').removeClass('exclude');
-							//remove the selection from all <it>em
-							suggestMenu.children('it.sel').not('.default').removeClass('sel');
-							//the default <it>em should be selected
-							suggestMenu.children('it.default:first').addClass('sel');
-						}
 					}
 				}
 			};
@@ -1765,9 +1767,15 @@ function updateCode(){
 										switch(upOrDown){
 											case 'down': //get the FIRST <it>em by default
 												newIt=selIt.next('it:first');
+												while(newIt.hasClass('exclude')){
+													newIt=newIt.next('it:first');
+												}
 												break;
 											case 'up': //get the LAST <it>em by default
 												newIt=selIt.prev('it:first');
+												while(newIt.hasClass('exclude')){
+													newIt=newIt.prev('it:first');
+												}
 												break;
 										}
 										//select the next/prev item
