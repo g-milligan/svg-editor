@@ -1698,7 +1698,7 @@ function updateCode(){
 					}
 					return returnBtn;
 				};
-				//return true IF editing <x> element text
+				//return text IF editing <x> element text
 				var getNewXText=function(){
 					var xTxt;
 					//if editing an <x> element
@@ -1710,16 +1710,36 @@ function updateCode(){
 					}
 					return xTxt;
 				};
+				//return text IF editing <v> element text
+				var getNewVText=function(){
+					var vTxt;
+					//if editing a <v> element
+					if(btnTag=='v'){
+						if(btn.hasClass('focus')){
+							//get the user-entered text inside <v><txt>
+							vTxt=txtElem.text();
+						}
+					}
+					return vTxt;
+				};
 				//jump to the previous input field
 				var skipLeft=function(){
 					var prevBtn;
 					//if NOT editing <x> element text
 					var xTxt=getNewXText();
 					if(xTxt==undefined||xTxt.length<1){
-						//get the next button to skip to
-						prevBtn=getNextPrevBtn('prev');
-						if(prevBtn!=undefined){
-							prevBtn.click();
+						//if NOT editing <v> element (with empty text)
+						var vTxt=getNewVText();
+						if(vTxt!=''){
+							//get the next button to skip to
+							prevBtn=getNextPrevBtn('prev');
+							if(prevBtn!=undefined){
+								prevBtn.click();
+							}
+						}else{
+							//editing <v> element (with empty text)...
+
+							//*** delete the <kv> element and move the <k> to the left <x> element
 						}
 					}else{
 						//editing <x> element text
@@ -1733,14 +1753,22 @@ function updateCode(){
 					//if NOT editing <x> element text
 					var xTxt=getNewXText();
 					if(xTxt==undefined||xTxt.length<1){
-						//get the next button to skip to
-						nextBtn=getNextPrevBtn('next');
-						if(nextBtn!=undefined){
-							nextBtn.click();
-							//put the cursor at the start
-							var firstL=nextBtn.find('txt l:first');
-							nextBtn.find('txt l.cursor').not(firstL).removeClass('cursor');
-							firstL.addClass('before').addClass('cursor');
+						//if NOT editing <v> element (with empty text)
+						var vTxt=getNewVText();
+						if(vTxt!=''){
+							//get the next button to skip to
+							nextBtn=getNextPrevBtn('next');
+							if(nextBtn!=undefined){
+								nextBtn.click();
+								//put the cursor at the start
+								var firstL=nextBtn.find('txt l:first');
+								nextBtn.find('txt l.cursor').not(firstL).removeClass('cursor');
+								firstL.addClass('before').addClass('cursor');
+							}
+						}else{
+							//editing <v> element (with empty text)...
+
+							//*** delete <kv> and move to the next element
 						}
 					}else{
 						//editing <x> element text
