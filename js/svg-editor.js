@@ -604,7 +604,8 @@ function updateCode(){
 					blankTxtElems.each(function(){
 						var blankTxtElem=jQuery(this);
 						//if NOT a NEW element <x> button
-						if(blankTxtElem[0].tagName.toLowerCase()!='x'){
+						var blankTxtTag=blankTxtElem[0].tagName.toLowerCase();
+						if(blankTxtTag!='x'){
 							//NOTE: the blank txt element will either be <g> or <kv>
 							var xNextElem=blankTxtElem.next('x:first');
 							//if the <x> button, after blankTxtElem, is the last one
@@ -1739,7 +1740,11 @@ function updateCode(){
 						}else{
 							//editing <v> element (with empty text)...
 
-							//*** delete the <kv> element and move the <k> to the left <x> element
+							//move to the previous <k> elem
+							var kElem=btn.prev('k:first');
+							kElem.parent().addClass('blank-txt'); //*** what am I doing here?
+							setBtnFocus(kElem);
+							kElem.parent().addClass('blank-txt');
 						}
 					}else{
 						//editing <x> element text
