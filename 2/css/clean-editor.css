@@ -4,13 +4,15 @@ cleaneditor editorui{width:100%;height:100%;position:absolute;top:0;left:0;overf
 cleaneditor editorui table.ui-table{width:100%;border-collapse:collapse;box-sizing:border-box;-moz-box-sizing:border-box;}
 cleaneditor editorui table.ui-table tr{}
 cleaneditor editorui table.ui-table tr td{vertical-align:top;}
-cleaneditor editorui table.ui-table tr td *{font-size:inherit;line-height:inherit;}
+cleaneditor editorui table.ui-table tr td *{font-size:inherit;line-height:inherit;vertical-align:middle;height:1em;display:inline-block;}
 /*theme*/
 cleaneditor editorui td{font-size:17px;padding:5px;}
 cleaneditor editorui td:first-child{width:30px;text-align:left;}
 cleaneditor editorui td:first-child:after{content:"."}
 cleaneditor editorui td:last-child{}
+cleaneditor editorui t{width:3em;}
+cleaneditor editorui sp{width:1em;}
 
 
-/*testing*/
-cleaneditor editorui{top:100%;border:solid 1px #000;}
+/*debug testing*/
+cleaneditor.debug editorui{top:100%;border:solid 1px #000;}
