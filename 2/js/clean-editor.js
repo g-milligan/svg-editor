@@ -187,7 +187,7 @@ var cleanEditor={
           };
           //position the drag cursor to follow the mouse drag
           var followMouseDrag=function(e){
-            //***
+            //*** find the .over element (either td.code or one of the child character elements). This is where the cursor can be moved
           };
           //adds a sel class to the selected characters in the UI
           var setUiSelected=function(){
@@ -440,6 +440,11 @@ var cleanEditor={
           ta.blur(function(e){
             stopBubbleUp(e);
             focusOff(e,jQuery(this));
+            //if cursor is not over any td.code or character element
+            if(uibody.find('.over:first').length<1){
+              //deselect any ui text (if any is selected)
+              deselect();
+            }
           });
           //click outer wrap
           wrap.click(function(e){
