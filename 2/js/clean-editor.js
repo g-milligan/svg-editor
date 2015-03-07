@@ -51,10 +51,12 @@ var cleanEditor={
           var strRAll=function(theStr,charToReplace,replaceWith){
             if(theStr!=undefined){
               if(charToReplace==undefined){charToReplace='';}
-              if(replaceWith==undefined){replaceWith='';}
-              if(charToReplace!=replaceWith){
-                while(theStr.indexOf(charToReplace)!=-1){
-                  theStr=theStr.replace(charToReplace,replaceWith);
+              if(theStr.indexOf(charToReplace)!=-1){
+                if(replaceWith==undefined){replaceWith='';}
+                if(charToReplace!=replaceWith){
+                  while(theStr.indexOf(charToReplace)!=-1){
+                    theStr=theStr.replace(charToReplace,replaceWith);
+                  }
                 }
               }
             }else{theStr='';}
@@ -147,7 +149,83 @@ var cleanEditor={
               ta.blur();
             }
           };
+          //when the mouse down happens on a letter, or should happen
+          var dragStart=function(e){
+            if(!wrap.hasClass('select')){
+              //allow select to be detected
+              wrap.addClass('select');
+            }
+          };
+          //when the mouse is released, or should happen
+          var dragStop=function(e){
+            if(wrap.hasClass('select')){
+              //stop allowing select to be detected
+              wrap.removeClass('select');
+            }
+          };
+          //highlight letters that are selected
+          var selectOn=function(){
+            var selObj=document.getSelection();
+            if(selObj!=undefined){
+              if(selObj.hasOwnProperty('type')){
+                if(selObj.type.toLowerCase()=='range'){
+                  //get the starting and end of the selection
+                  var startElem=jQuery(selObj.anchorNode.parentNode);
+                  var endElem=jQuery(selObj.focusNode.parentNode);
+                  //decide what direction the selectino was dragged
+                  var direction='';
+                  //get parent tr elements
+                  var startTr=startElem.parents('tr:first');
+                  var endTr=endElem.parents('tr:first');
+                  //if selection starts and ends in the same row
+                  var startRowIndex=startTr.index();
+                  var endRowIndex=endTr.index();
+                  if(startRowIndex==endRowIndex){
+                    //if the start and end letter are the same
+                    var startCharIndex=startElem.index();
+                    var endCharIndex=endElem.index();
+                    if(startCharIndex==endCharIndex){
+                      direction='none';
+                    }else if(startCharIndex<endCharIndex){
+                      //start char is before end char
+                      direction='right';
+                    }else{
+                      //start char is after end char
+                      direction='left';
+                    }
+                  }else if(startRowIndex<endRowIndex){
+                    //start row is before the end row
+                    direction='right';
+                  }else{
+                    //start row is after the end row
+                    direction='left';
+                  }
+                  //***
+                  console.log(direction);
+                }
+              }
+            }
+          };
         //==ATTACH EVENTS==
+          //mouse up event
+          jQuery('body:first').mouseup(function(e){
+            if(wrap.hasClass('select')){
+              dragStop(e);
+              selectOn();
+            }
+          });
+          jQuery('body:first').mouseleave(function(e){
+            dragStop(e);
+          });
+          /*if(jQuery(document).selectionchange){
+            jQuery(document).selectionchange(function(){
+              if(wrap.hasClass('select')){
+
+              }
+            });
+          }else{
+
+          }*/
           //src text gains focus by itself (tab entry?)
           ta.focus(function(e){
             stopBubbleUp(e);
@@ -192,9 +270,29 @@ var cleanEditor={
         //==FUNCTIONS TO DISPLAY UI TEXT==
           //convert a string text to something that can be dislayed in the ui
           var toUiStr=function(str){
-            str=strRAll(str,'<','&lt;'); str=strRAll(str,'>','&gt;');
-            str=strRAll(str,'\t','<t></t>'); str=strRAll(str,' ','<sp></sp>');
-            return str;
+            //for each character
+            var ret='';
+            for(var c=0;c<str.length;c++){
+              var char=str[c];
+              switch(char){
+                case ' ':
+                  ret+='<sp>&nbsp;</sp>';
+                  break;
+                case '\t':
+                  ret+='<t>&nbsp;</t>';
+                  break;
+                case '<':
+                  ret+='<l>&lt;</l>';
+                  break;
+                case '>':
+                  ret+='<l>&gt;</l>';
+                  break;
+                default:
+                  ret+='<l>'+char+'</l>';
+                  break;
+              }
+            }
+            return ret;
           };
           //return UI row html from raw rowTxtl
           var appendUiRow=function(rowNum,rowTxt){
@@ -203,8 +301,7 @@ var cleanEditor={
             //get this latest row
             var newRow=uibody.children('tr:last');
             var numTd=newRow.children('td:first'); var lineTd=newRow.children('td:last');
-            //add letter elements to each text character in this line
-            //***
+            var lineChars=lineTd.children();
             //add the new row's events
             numTd.click(function(e){
               stopBubbleUp(e); focusOn(e,jQuery(this));
@@ -214,6 +311,19 @@ var cleanEditor={
               stopBubbleUp(e); focusOn(e,jQuery(this));
               //***
             });
+            lineChars.click(function(e){
+              stopBubbleUp(e); focusOn(e,jQuery(this));
+              //***
+            });
+            lineTd.mousedown(function(e){
+              dragStart(e);
+            });
+            /*lineChars.mousemove(function(e){
+              if(jQuery(this).is(':selected')){
+                stopBubbleUp(e); focusOn(e,jQuery(this));
+                selectOn(e,jQuery(this));
+              }
+            });*/
           };
           //display the textarea contents, in ui table rows
           var textToUi=function(maxRows){
