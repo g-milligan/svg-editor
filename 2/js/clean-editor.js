@@ -176,11 +176,14 @@ var cleanEditor={
                   //get the starting and end of the selection
                   var startElem=jQuery(selObj.anchorNode.parentNode);
                   var endElem=jQuery(selObj.focusNode.parentNode);
+                  endElem.addClass('end-sel');
+                  //==DISCOVER DRAG DIRECTION AND HOW MANY ROWS SELECTION SPANS==
                   //decide what direction the selectino was dragged
-                  var direction='';
+                  var direction=''; var rowSpan=1;
                   //get parent tr elements
                   var startTr=startElem.parents('tr:first');
                   var endTr=endElem.parents('tr:first');
+                  endTr.addClass('end-sel');
                   //if selection starts and ends in the same row
                   var startRowIndex=startTr.index();
                   var endRowIndex=endTr.index();
@@ -200,12 +203,115 @@ var cleanEditor={
                   }else if(startRowIndex<endRowIndex){
                     //start row is before the end row
                     direction='right';
+                    rowSpan=endRowIndex-startRowIndex+1;
                   }else{
                     //start row is after the end row
                     direction='left';
+                    rowSpan=startRowIndex-endRowIndex+1;
                   }
-                  //***
-                  console.log(direction);
+                  //==ADD THE SEL CLASS TO SELECTED CHARACTER ELEMENTS==
+                  //select the next adacent character element
+                  var nextNew=function(charElem,dir){
+                    var el;
+                    //get the next adjacent element
+                    if(dir=='right'){el=charElem.next();}
+                    else{el=charElem.prev();}
+                    //if there is another adjacent element
+                    if(el.length>0){
+                      //mark this as a new selected element
+                      el.addClass('new-sel');
+                      //if this should be the last selected
+                      if(el.hasClass('end-sel')){
+                        el=undefined;
+                      }
+                    }else{el=undefined;} return el;
+                  };
+                  //select each next adacent character in a single row
+                  var whileNext=function(charElem,dir){
+                    //the first char element should have the class
+                    charElem.addClass('new-sel');
+                    //while there is a next element in this row that should get the new-sel class
+                    while(charElem!=undefined){
+                      //get the next new-sel character element, if there is one
+                      charElem=nextNew(charElem,dir);
+                    }
+                  };
+                  //select ALL characters in the next fully selected row
+                  var nextNewFullRow=function(rEl,dir){
+                    var el;
+                    //get the next adjacent element
+                    if(dir=='right'){el=rEl.next();}
+                    else{el=rEl.prev();}
+                    //if there is another adjacent element
+                    if(el.length>0){
+                      //if this should be the last selected
+                      if(el.hasClass('end-sel')){
+                        el=undefined;
+                      }else{
+                        //mark characters in this row as new-sel
+                        var cTd=el.children('td.code:last');
+                        cTd.children().addClass('new-sel');
+                      }
+                    }else{el=undefined;} return el;
+                  };
+                  //select ALL characters in EACH fully selected row (between first and last row)
+                  var whileNextFullRow=function(rEl,dir){
+                    //mark characters in this row as new-sel
+                    var cTd=rEl.children('td.code:last');
+                    cTd.children().addClass('new-sel');
+                    //while there is a next element in this row that should get the new-sel class
+                    while(rEl!=undefined){
+                      //get the next FULLY SELECTED tr row, if there is one
+                      rEl=nextNewFullRow(rEl,dir);
+                    }
+                  };
+                  //remove new-sel class and replace with actual sel class
+                  var finishNewSel=function(){
+                    //remove previous selection
+                    uibody.find('.sel').not('.new-sel').removeClass('sel');
+                    //set new selection (and remove new-sel)
+                    uibody.find('.new-sel').removeClass('new-sel').not('.sel').addClass('sel');
+                  };
+                  //depending on the direction
+                  switch(direction){
+                    case 'none': //no direction; only one character selected
+                      //deselect all that are NOT selected
+                      uibody.find('.sel').not(startElem).removeClass('sel');
+                      //select the single character
+                      startElem.addClass('sel');
+                      break;
+                    case 'right': //cursor drag to the right
+                      whileNext(startElem,'right');
+                      //if MORE than one row was selected
+                      if(rowSpan>1){
+                        //if more than two rows were selected
+                        if(rowSpan>2){
+                          //select each full row BETWEEN the first and last row
+                          whileNextFullRow(startTr,'right');
+                        }
+                        //select the last row up until the last character element
+                        whileNext(endTr.children('td.code:last').children(':first'),'right');
+                      }
+                      //replace new-sel classes with sel class
+                      finishNewSel();
+                      break;
+                    case 'left': //cursor drag to the left
+                      whileNext(startElem,'left');
+                      //if MORE than one row was selected
+                      if(rowSpan>1){
+                        //if more than two rows were selected
+                        if(rowSpan>2){
+                          //select each full row between the first and last row
+                          whileNextFullRow(startTr,'left');
+                        }
+                        //select the last row up until the last character element
+                        whileNext(endTr.children('td.code:last').children(':last'),'left');
+                      }
+                      //replace new-sel classes with sel class
+                      finishNewSel();
+                      break;
+                  }
+                  endElem.removeClass('end-sel'); endTr.removeClass('end-sel');
                 }
               }
             }
@@ -323,18 +429,20 @@ var cleanEditor={
               stopBubbleUp(e); focusOn(e,jQuery(this));
               //***
             });
+            lineTd.mousedown(function(e){
+              dragStart(e);
+            });
             lineChars.click(function(e){
               stopBubbleUp(e); focusOn(e,jQuery(this));
               //***
             });
-            lineTd.mousedown(function(e){
-              dragStart(e);
-            });
+            //==TEXT HIGHLIGHTER==
+            //***
           };
           //display the textarea contents, in ui table rows
           var textToUi=function(maxRows){
             //set a default max number of rows, if none given
-            if(maxRows==undefined||maxRows<1){maxRows=333;}
+            if(maxRows==undefined||maxRows<1){maxRows=1000;}
             //get the text value
             var txt=ta.val();
             //clear the contents, if any, of the UI
