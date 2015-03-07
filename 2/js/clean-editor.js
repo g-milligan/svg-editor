@@ -67,6 +67,10 @@ var cleanEditor={
             if(e.stopPropagation){e.stopPropagation();}
             else{console.log('This browser doesn\'t support stopPropagation! cleanEditor may not work properly!');}
           };
+          //prevent default event action
+          var preventDefault=function(e){
+            e.preventDefault();
+          };
           //detect special key press (ctl, alt, shift...)
           var isHeldSpecial=function(e){
             var isSpecial=true;
@@ -151,20 +155,20 @@ var cleanEditor={
           };
           //when the mouse down happens on a letter, or should happen
           var dragStart=function(e){
-            if(!wrap.hasClass('select')){
+            if(!wrap.hasClass('drag')){
               //allow select to be detected
-              wrap.addClass('select');
+              wrap.addClass('drag');
             }
           };
           //when the mouse is released, or should happen
           var dragStop=function(e){
-            if(wrap.hasClass('select')){
+            if(wrap.hasClass('drag')){
               //stop allowing select to be detected
-              wrap.removeClass('select');
+              wrap.removeClass('drag');
             }
           };
-          //highlight letters that are selected
-          var selectOn=function(){
+          //adds a sel class to the selected characters in the UI
+          var setUiSelected=function(){
             var selObj=document.getSelection();
             if(selObj!=undefined){
               if(selObj.hasOwnProperty('type')){
@@ -206,26 +210,28 @@ var cleanEditor={
               }
             }
           };
+          //handle when the selecting of letters stops
+          var selectStop=function(){
+            //adds a sel class to the selected characters in the UI
+            var sel=setUiSelected();
+            //*** select the textarea? Or do this in focusOn?
+          };
         //==ATTACH EVENTS==
           //mouse up event
           jQuery('body:first').mouseup(function(e){
-            if(wrap.hasClass('select')){
+            if(wrap.hasClass('drag')){
               dragStop(e);
-              selectOn();
+              selectStop();
             }
           });
           jQuery('body:first').mouseleave(function(e){
             dragStop(e);
           });
-          /*if(jQuery(document).selectionchange){
-            jQuery(document).selectionchange(function(){
-              if(wrap.hasClass('select')){
-
-              }
-            });
-          }else{
-
-          }*/
+          wrap.mousemove(function(e){
+            if(wrap.hasClass('drag')){
+              setUiSelected();
+            }
+          });
           //src text gains focus by itself (tab entry?)
           ta.focus(function(e){
             stopBubbleUp(e);
@@ -297,7 +303,7 @@ var cleanEditor={
           //return UI row html from raw rowTxtl
           var appendUiRow=function(rowNum,rowTxt){
             //add the basic row html to the ui table body
-            uibody.append('<tr><td>'+rowNum+'</td><td>'+toUiStr(rowTxt)+'</td></tr>');
+            uibody.append('<tr><td class="num">'+rowNum+'</td><td class="code">'+toUiStr(rowTxt)+'</td></tr>');
             //get this latest row
             var newRow=uibody.children('tr:last');
             var numTd=newRow.children('td:first'); var lineTd=newRow.children('td:last');
@@ -306,6 +312,12 @@ var cleanEditor={
             numTd.click(function(e){
               stopBubbleUp(e); focusOn(e,jQuery(this));
               //***
+            });
+            numTd.select(function(e){
+              stopBubbleUp(e); preventDefault(e);
+            });
+            numTd.on('mousemove touchmove',function(e){
+              stopBubbleUp(e); preventDefault(e);
             });
             lineTd.click(function(e){
               stopBubbleUp(e); focusOn(e,jQuery(this));
@@ -318,12 +330,6 @@ var cleanEditor={
             lineTd.mousedown(function(e){
               dragStart(e);
             });
-            /*lineChars.mousemove(function(e){
-              if(jQuery(this).is(':selected')){
-                stopBubbleUp(e); focusOn(e,jQuery(this));
-                selectOn(e,jQuery(this));
-              }
-            });*/
           };
           //display the textarea contents, in ui table rows
           var textToUi=function(maxRows){
