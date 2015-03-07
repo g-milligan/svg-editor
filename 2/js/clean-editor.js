@@ -153,6 +153,20 @@ var cleanEditor={
               ta.blur();
             }
           };
+          //when start moving selected letters (by dragging)
+          var dragSelStart=function(e){
+            if(!wrap.hasClass('drag-sel')){
+              //allow dragging selected to be detected
+              wrap.addClass('drag-sel');
+            }
+          };
+          //when end moving selected letters (by dragging)
+          var dragSelStop=function(e){
+            if(wrap.hasClass('drag-sel')){
+              //stop allowing dragging selected to be detected
+              wrap.removeClass('drag-sel');
+            }
+          };
           //when the mouse down happens on a letter, or should happen
           var dragStart=function(e){
             if(!wrap.hasClass('drag')){
@@ -377,19 +391,35 @@ var cleanEditor={
         //==ATTACH EVENTS==
           //mouse up event
           jQuery('body:first').mouseup(function(e){
+            //if dragging cursor
             if(wrap.hasClass('drag')){
+              //stop dragging
               dragStop(e);
-              selectStop();
+              //if dragging selected text, NOT selecting new text
+              if(wrap.hasClass('drag-sel')){
+                dragSelStop(e);
+              }else{
+                //NOT dragging selected text... stop selecting text
+                selectStop();
+              }
             }else{
+              //NOT dragging at all... deselect text if any is selected
               deselect();
             }
           });
           jQuery('body:first').mouseleave(function(e){
             dragStop(e);
+            dragSelStop(e);
           });
           wrap.mousemove(function(e){
             if(wrap.hasClass('drag')){
-              setUiSelected();
+              //if dragging selected text
+              if(wrap.hasClass('drag-sel')){
+                //***
+              }else{
+                //NOT dragging selected text
+                setUiSelected();
+              }
             }
           });
           //src text gains focus by itself (tab entry?)
@@ -495,7 +525,7 @@ var cleanEditor={
                 deselect();
               }else{
                 //maybe drag moving selected letters...
-                //***
+                dragSelStart(e);
               }
               dragStart(e);
             });

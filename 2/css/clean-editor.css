@@ -5,6 +5,9 @@ cleaneditor editorui table.ui-table{width:100%;border-collapse:collapse;border-s
 cleaneditor editorui table.ui-table tr{}
 cleaneditor editorui table.ui-table tr td{vertical-align:middle;height:1.4rem;padding:0;}
 cleaneditor editorui table.ui-table tr td > *{line-height:inherit;vertical-align:inherit;height:1.4rem;display:inline-block;line-height:1.4rem;}
+cleaneditor editorui table.ui-table tr td.code{font-size:0;}
+cleaneditor editorui table.ui-table tr td.code .sel{cursor:pointer;}
+cleaneditor.drag-sel editorui table.ui-table tr td.code *{cursor:pointer;}
 /*disable the default selection display in the ui*/
 cleaneditor editorui table.ui-table *{-webkit-user-select:none;-khtml-user-select:none;-moz-user-select:-moz-none;-o-user-select:none;user-select:none;}
 cleaneditor editorui table.ui-table tr td.code *{-webkit-user-select:text;-khtml-user-select:text;-moz-user-select:text;-o-user-select:text;user-select:text;}
@@ -14,7 +17,6 @@ cleaneditor editorui table.ui-table tr td.code *::selection {background:transpar
 cleaneditor editorui td{}
 cleaneditor editorui td.num{font-size:1rem;width:4rem;text-align:left;}
 cleaneditor editorui td.num:after{content:"."}
-cleaneditor editorui td.code{font-size:0;}
 cleaneditor editorui td.code *{font-size:1rem;}
 cleaneditor editorui td.code .sel{background-color:blue;color:#fff;}
 
