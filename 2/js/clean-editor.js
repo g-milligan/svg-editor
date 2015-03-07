@@ -181,6 +181,14 @@ var cleanEditor={
               wrap.removeClass('drag');
             }
           };
+          //drop the drag-selected text onto the current cursor position
+          var dropAtCursor=function(){
+            //***
+          };
+          //position the drag cursor to follow the mouse drag
+          var followMouseDrag=function(e){
+            //***
+          };
           //adds a sel class to the selected characters in the UI
           var setUiSelected=function(){
             var selObj=document.getSelection();
@@ -397,6 +405,7 @@ var cleanEditor={
               dragStop(e);
               //if dragging selected text, NOT selecting new text
               if(wrap.hasClass('drag-sel')){
+                dropAtCursor();
                 dragSelStop(e);
               }else{
                 //NOT dragging selected text... stop selecting text
@@ -415,7 +424,7 @@ var cleanEditor={
             if(wrap.hasClass('drag')){
               //if dragging selected text
               if(wrap.hasClass('drag-sel')){
-                //***
+                followMouseDrag(e);
               }else{
                 //NOT dragging selected text
                 setUiSelected();
@@ -517,6 +526,11 @@ var cleanEditor={
               deselect();
               dragStart(e);
             });
+            lineTd.hover(function(e){
+              jQuery(this).addClass('over');
+            },function(e){
+              jQuery(this).removeClass('over');
+            });
             lineChars.mousedown(function(e){
               stopBubbleUp(e);
               //if this letter is NOT already selected
@@ -528,6 +542,15 @@ var cleanEditor={
                 dragSelStart(e);
               }
               dragStart(e);
+            });
+            lineChars.hover(function(e){
+              stopBubbleUp(e);
+              jQuery(this).parent().removeClass('over');
+              jQuery(this).addClass('over');
+            },function(e){
+              stopBubbleUp(e);
+              jQuery(this).parent().removeClass('over');
+              jQuery(this).removeClass('over');
             });
             lineChars.click(function(e){
               stopBubbleUp(e); focusOn(e,jQuery(this));
