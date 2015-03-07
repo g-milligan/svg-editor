@@ -316,11 +316,63 @@ var cleanEditor={
               }
             }
           };
+          //function to duplicate UI selection into the hidden textarea's selection
+          var setTextareaSelected=function(){
+            //==COUNT THE SELECT START AND END INDEXES==
+            var selectionStart=0;var selectionEnd=0; var foundFirstSel=false;
+            //get all rows and all characters
+            var allRows=uibody.children('tr');
+            var allChars=allRows.children('td.code').children();
+            //count the number of characters BEFORE the first selected
+            allChars.each(function(c){
+              //if this character is selected
+              if(jQuery(this).hasClass('sel')){
+                //mark the first selected row
+                jQuery(this).parents('tr:first').addClass('start-sel');
+                foundFirstSel=true;
+                //end the counting
+                return false;
+              }else{
+                selectionStart++;
+                //if this is the last character in this row
+                if(jQuery(this).next().length<1){
+                  //count the extra newline character
+                  selectionStart++;
+                }
+              }
+            });
+            if(foundFirstSel){
+              //get the select end index
+              selectionEnd=selectionStart+allChars.filter('.sel').length;
+              //count the number of newline characters INSIDE the selection
+              var lastSelChar=allChars.filter('.sel:last');
+              var lastSelRow=lastSelChar.parents('tr:first');
+              while(!lastSelRow.hasClass('start-sel')){
+                //one more new line character
+                selectionEnd++;
+                lastSelRow=lastSelRow.prev();
+              }
+              lastSelRow.removeClass('start-sel');
+              //==SET THE SELECTION START AND END INDEXES IN THE TEXTAREA
+              //set the textarea selection range
+              ta[0].selectionStart=selectionStart;
+              ta[0].selectionEnd=selectionEnd;
+            }
+          };
           //handle when the selecting of letters stops
           var selectStop=function(){
-            //adds a sel class to the selected characters in the UI
-            var sel=setUiSelected();
-            //*** select the textarea? Or do this in focusOn?
+            //set the selection class on UI characters (that are in the selection range)
+            setUiSelected();
+            //align textarea with the UI selection
+            setTextareaSelected();
+          };
+          //deselect any selected ui letters
+          var deselect=function(){
+            //remove selection from ui elements
+            if(uibody.find('tr td.code .sel').removeClass('sel').length>0){
+              //remove selection from hidden textarea
+              ta[0].selectionStart=ta[0].selectionEnd=-1;
+            }
           };
         //==ATTACH EVENTS==
           //mouse up event
@@ -328,6 +380,8 @@ var cleanEditor={
             if(wrap.hasClass('drag')){
               dragStop(e);
               selectStop();
+            }else{
+              deselect();
             }
           });
           jQuery('body:first').mouseleave(function(e){
@@ -430,6 +484,19 @@ var cleanEditor={
               //***
             });
             lineTd.mousedown(function(e){
+              deselect();
+              dragStart(e);
+            });
+            lineChars.mousedown(function(e){
+              stopBubbleUp(e);
+              //if this letter is NOT already selected
+              if(!jQuery(this).hasClass('sel')){
+                //select
+                deselect();
+              }else{
+                //maybe drag moving selected letters...
+                //***
+              }
               dragStart(e);
             });
             lineChars.click(function(e){
