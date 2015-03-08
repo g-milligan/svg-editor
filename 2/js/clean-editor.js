@@ -181,13 +181,134 @@ var cleanEditor={
               wrap.removeClass('drag');
             }
           };
+          //create or find the cursor element, as needed
+          var cursorElem;
+          var getCur=function(){
+            if(cursorElem==undefined||cursorElem.length<1){
+              cursorElem=uibody.find('tr td.code > c:first');
+              if(cursorElem.length<1){
+                uibody.find('tr td.code:last').append('<c></c>');
+                cursorElem=uibody.find('tr td.code > c:last');
+              }
+            }
+            return cursorElem;
+          };
           //drop the drag-selected text onto the current cursor position
+          var follow_drag_timeout;
           var dropAtCursor=function(){
+            clearTimeout(follow_drag_timeout);
+            var cr=getCur();
             //***
+          };
+          //figures out if the mouse curor is closer to the right or left edge of an element
+          var findCloserEdgeX=function(e,elem){
+            var ret='';
+            //get the left and right edges of this letter character
+            var elLeft=elem.offset().left;
+            var elRight=elLeft+elem.outerWidth();
+            //figure out if the mouse is closer to the left or right edge of the letter character
+            var rDiff=elRight-e.clientX;
+            var lDiff=e.clientX-elLeft;
+            //if rDiff is negative, mouse is right of the right edge (out of the element)
+            if(rDiff<0){
+              ret='right out';
+            }else if(lDiff<0){
+              //lDiff is negative, mouse is left of the left edge (out of the element)
+              ret='left out';
+            }else{
+              //mouse is BETWEEN left and right edge (is IN the element)...
+
+              //if the mouse is closer to the left edge
+              if(lDiff<rDiff){
+                ret='left in';
+              }else if(lDiff>rDiff){
+                //the mouse is closer to the right edge
+                ret='right in';
+              }else{
+                //mouse is equa-distant from either edge
+                ret='center in';
+              }
+            }
+            return ret;
           };
           //position the drag cursor to follow the mouse drag
           var followMouseDrag=function(e){
-            //*** find the .over element (either td.code or one of the child character elements). This is where the cursor can be moved
+            clearTimeout(follow_drag_timeout);
+            follow_drag_timeout=setTimeout(function(){
+              //find the cursor
+              var cr=getCur();
+              //if a cursor element is being hovered
+              var overElem=uibody.find('.over:first');
+              if(overElem.length>0){
+                //function to detect if the cursor is already adjacent to the element
+                var crAlreadyThere=function(elem,leftOrRight){
+                  var isThere=true;
+                  var adjElem;
+                  //get the adjacent element
+                  if(leftOrRight=='left'){adjElem=elem.prev();}
+                  else{adjElem=elem.next();}
+                  //if there is an adjacent element
+                  if(adjElem.length>0){
+                    //is the adjacent element the cursor?
+                    if(!adjElem[0].hasOwnProperty('tagName')||adjElem[0].tagName.toLowerCase()!='c'){
+                      isThere=false;}
+                  }else{isThere=false;}
+                  return isThere;
+                };
+                //function to move cursor before/after element
+                var moveCurNextTo=function(elem,leftOrRight){
+                  //if the cursor is NOT already in position
+                  if(!crAlreadyThere(elem,leftOrRight)){
+                    if(leftOrRight=='left'){
+                      //move the cursor BEFORE the element
+                      elem.before(cr);
+                    }else{
+                      //move the cursor AFTER the element
+                      elem.after(cr);
+                    }
+                  }
+                };
+                //depending on the type of hovered element
+                var tagName=overElem[0].tagName.toLowerCase();
+                switch(tagName){
+                  case 'td': //hovered over the code line but NOT over any letter IN the code line
+                    //if the cursor is not already at the end of this code line
+                    var lastCharInTd=overElem.children(':last');
+                    //if there are any chars in the code line
+                    if(lastCharInTd.length>0){
+                      //if the last code line element is NOT the cursor
+                      if(!lastCharInTd[0].hasOwnProperty('tagName')||lastCharInTd[0].tagName.toLowerCase()!='c'){
+                        //put the cursor at the end of the code line
+                        overElem.append(cr);
+                      }
+                    }else{
+                      //no chars in the code line... put the cursor at the end of the code line
+                      overElem.append(cr);
+                    }
+                    break;
+                  default: //hovered over a character IN the code line
+                    //if hovering over a character this is ALREADY selected
+                    if(overElem.hasClass('sel')){
+                      //get the first selected character
+                      var firstSel=uibody.find('.sel:first');
+                      moveCurNextTo(firstSel,'left');
+                    }else{
+                      //NOT hovering over a selected character...
+
+                      //is the mouse closer to the right or left edge of the character?
+                      var closerEdge=findCloserEdgeX(e,overElem);
+                      //if closer to the left edge (or centered)
+                      if(closerEdge.indexOf('left')==0||closerEdge.indexOf('center')==0){
+                        moveCurNextTo(overElem,'left');
+                      }else{
+                        //closer to the right edge...
+                        moveCurNextTo(overElem,'right');
+                      }
+                    }
+                    break;
+                }
+              }
+            },16);
           };
           //adds a sel class to the selected characters in the UI
           var setUiSelected=function(){
@@ -450,6 +571,7 @@ var cleanEditor={
           wrap.click(function(e){
             stopBubbleUp(e);
             focusOn(e,jQuery(this));
+            //***
           });
           //keydown textarea
           ta.keydown(function(e){
