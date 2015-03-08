@@ -710,7 +710,6 @@ var cleanEditor={
                 setTextareaCaret();
               }
             }
-            //***
           });
           //keydown textarea
           ta.keydown(function(e){
@@ -777,14 +776,13 @@ var cleanEditor={
             numTd.click(function(e){
               stopBubbleUp(e); focusOn(e,jQuery(this));
               //if NOT dragging
-              if(!wrap.hasClass('drag')){
+              if(!wrap.hasClass('drag')){ //*** select line instead of set cursor?
                 //set the cursor at the end of this line
                 if(setUiCurAtLineStart(jQuery(this).next('td.code:first'))){
                   //update the cursor position
                   setTextareaCaret();
                 }
               }
-              //***
             });
             numTd.select(function(e){
               stopBubbleUp(e); preventDefault(e);
@@ -802,7 +800,6 @@ var cleanEditor={
                   setTextareaCaret();
                 }
               }
-              //***
             });
             lineTd.mousedown(function(e){
               deselect();
@@ -844,9 +841,8 @@ var cleanEditor={
                   setTextareaCaret();
                 }
               }
-              //***
             });
-            //==TEXT HIGHLIGHTER==
+            //==TEXT HIGHLIGHTER== ?
             //***
           };
           //display the textarea contents, in ui table rows
