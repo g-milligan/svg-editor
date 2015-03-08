@@ -318,7 +318,7 @@ var cleanEditor={
             },16);
           };
           //adds a sel class to the selected characters in the UI
-          var setUiSelected=function(){
+          var setUiSelected=function(e){
             var retObj;
             var selObj=document.getSelection();
             if(selObj!=undefined){
@@ -435,8 +435,16 @@ var cleanEditor={
                       uibody.find('.sel').not(startElem).removeClass('sel');
                       //select the single character
                       startElem.addClass('sel');
-                      //should put the cursor to the left of the selected character
-                      retObj['cur_pos']='left';
+                      //should the cursor be to the right or left?
+                      var closerEdge=findCloserEdgeX(e,startElem);
+                      //if the cursor is closer to the left edge of the selection
+                      if(closerEdge.indexOf('left')==0||closerEdge.indexOf('center')==0){
+                        //cursor should appear to the left
+                        retObj['cur_pos']='left';
+                      }else{
+                        //cursor should appear to the right
+                        retObj['cur_pos']='right';
+                      }
                       break;
                     case 'right': //cursor drag to the right
                       whileNext(startElem,'right');
@@ -624,9 +632,9 @@ var cleanEditor={
             }
           };
           //handle when the selecting of letters stops
-          var selectStop=function(){
+          var selectStop=function(e){
             //set the selection class on UI characters (that are in the selection range)
-            var selObj=setUiSelected();
+            var selObj=setUiSelected(e);
             //if selection info is found
             if(selObj!=undefined){
               var cr=getCur();
@@ -661,7 +669,7 @@ var cleanEditor={
                 dragSelStop(e);
               }else{
                 //NOT dragging selected text... stop selecting text
-                selectStop();
+                selectStop(e);
               }
             }else{
               //NOT dragging at all... deselect text if any is selected
@@ -679,7 +687,7 @@ var cleanEditor={
                 followMouseDrag(e);
               }else{
                 //NOT dragging selected text
-                setUiSelected();
+                setUiSelected(e);
               }
             }
           });
