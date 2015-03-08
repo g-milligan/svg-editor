@@ -10,16 +10,16 @@ cleaneditor editorui table.ui-table tr td.code .sel{cursor:pointer;}
 cleaneditor.drag-sel{cursor:not-allowed;}
 cleaneditor.drag-sel editorui table.ui-table tr td.code{cursor:pointer;}
 /*cursor*/
-@keyframes "blink"{from,to{opacity:.2;}50%{opacity:1;}}
-@-moz-keyframes blink{from,to{opacity:.2;}50%{opacity:1;}}
-@-webkit-keyframes "blink"{from,to{opacity:.2;}50%{opacity:1;}}
-@-ms-keyframes "blink"{from,to{opacity:.2;}50%{opacity:1;}}
-@-o-keyframes "blink"{from,to{opacity:.2;}50%{opacity:1;}}
+@keyframes "blink"{from,to{opacity:.01;}50%{opacity:1;}}
+@-moz-keyframes blink{from,to{opacity:.01;}50%{opacity:1;}}
+@-webkit-keyframes "blink"{from,to{opacity:.01;}50%{opacity:1;}}
+@-ms-keyframes "blink"{from,to{opacity:.01;}50%{opacity:1;}}
+@-o-keyframes "blink"{from,to{opacity:.01;}50%{opacity:1;}}
 cleaneditor editorui table.ui-table tr td.code > c{position:relative;overflow:visible;width:0;
-  -webkit-animation:.6s blink step-end infinite;-moz-animation:.6s blink step-end infinite;-ms-animation:.6s blink step-end infinite;-o-animation:.6s blink step-end infinite;animation:.6s blink step-end infinite;}
+  -webkit-animation:.85s blink linear infinite;-moz-animation:.85s blink linear infinite;-ms-animation:.85s blink linear infinite;-o-animation:.85s blink linear infinite;animation:.85s blink linear infinite;}
 cleaneditor.drag-sel editorui table.ui-table tr td.code > c{width:.2rem;
   -webkit-animation:none;-moz-animation:none;-ms-animation:none;-o-animation:none;animation:none;}
-cleaneditor editorui table.ui-table tr td.code > c:before{content:"|";font-family:'Arial Black','Arial Bold',Gadget,sans-serif;font-weight:bold;display:block;font-size:110%;position:absolute;top:-10%;bottom:-10%;left:0;right:0;margin:auto;}
+cleaneditor editorui table.ui-table tr td.code > c:before{content:"";width:2px;height:100%;font-family:'Arial Black','Arial Bold',Gadget,sans-serif;font-weight:bold;display:block;font-size:110%;position:absolute;top:-10%;bottom:-10%;left:0;right:0;margin:auto;}
 /*disable the default selection display in the ui*/
 cleaneditor editorui table.ui-table *{-webkit-user-select:none;-khtml-user-select:none;-moz-user-select:-moz-none;-o-user-select:none;user-select:none;}
 cleaneditor editorui table.ui-table tr td.code *{-webkit-user-select:text;-khtml-user-select:text;-moz-user-select:text;-o-user-select:text;user-select:text;}
@@ -27,12 +27,12 @@ cleaneditor editorui table.ui-table tr td.code *::-moz-selection{background:tran
 cleaneditor editorui table.ui-table tr td.code *::selection {background:transparent;}
 /*theme*/
 cleaneditor editorui td{}
-cleaneditor editorui td.num{font-size:1rem;width:4rem;text-align:left;}
+cleaneditor editorui td.num{font-size:1rem;width:4rem;text-align:right;border-right:dashed 1px #ccc;background-color:#F0F0F0;color:#ccc;}
 cleaneditor editorui td.num:after{content:"."}
 cleaneditor editorui td.code *{font-size:1rem;}
 cleaneditor editorui td.code .sel{background-color:rgb(0, 137, 178);color:#fff;}
-cleaneditor editorui td.code > c:before{}
-cleaneditor.drag-sel editorui td.code > c:before{text-shadow:0 0 .5rem yellow;}
+cleaneditor editorui td.code > c:before{background-color:#000;}
+cleaneditor.drag-sel editorui td.code > c:before{box-shadow:0 0 .5rem rgb(0, 137, 178);}
 
 
 cleaneditor editorui t{letter-spacing:3rem;}

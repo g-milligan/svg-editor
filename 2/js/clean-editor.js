@@ -120,6 +120,18 @@ var cleanEditor={
             return isCtl;
           };
         //==EVENT HANDLERS==
+          //create or find the cursor element, as needed
+          var cursorElem;
+          var getCur=function(){
+            if(cursorElem==undefined||cursorElem.length<1){
+              cursorElem=uibody.find('tr td.code > c:first');
+              if(cursorElem.length<1){
+                uibody.find('tr td.code:last').append('<c></c>');
+                cursorElem=uibody.find('tr td.code > c:last');
+              }
+            }
+            return cursorElem;
+          };
           //when the editor is double clicked
           var dblClick=function(e,elem){
 
@@ -152,6 +164,13 @@ var cleanEditor={
               //remove the focus
               ta.blur();
             }
+            //if the ui cursor is still blinking
+            if(cursorElem!=undefined){
+              if(cursorElem.length>0){
+                //remove the cursor from the ui
+                cursorElem.remove();
+              }
+            }
           };
           //when start moving selected letters (by dragging)
           var dragSelStart=function(e){
@@ -180,18 +199,6 @@ var cleanEditor={
               //stop allowing select to be detected
               wrap.removeClass('drag');
             }
-          };
-          //create or find the cursor element, as needed
-          var cursorElem;
-          var getCur=function(){
-            if(cursorElem==undefined||cursorElem.length<1){
-              cursorElem=uibody.find('tr td.code > c:first');
-              if(cursorElem.length<1){
-                uibody.find('tr td.code:last').append('<c></c>');
-                cursorElem=uibody.find('tr td.code > c:last');
-              }
-            }
-            return cursorElem;
           };
           //drop the drag-selected text onto the current cursor position
           var follow_drag_timeout;
@@ -312,14 +319,20 @@ var cleanEditor={
           };
           //adds a sel class to the selected characters in the UI
           var setUiSelected=function(){
+            var retObj;
             var selObj=document.getSelection();
             if(selObj!=undefined){
               if(selObj.hasOwnProperty('type')){
                 if(selObj.type.toLowerCase()=='range'){
+                  retObj={};
+                  //remove the cursor while selecting
+                  if(cursorElem!=undefined&&cursorElem.length>0){
+                    cursorElem.remove();
+                  }
                   //get the starting and end of the selection
                   var startElem=jQuery(selObj.anchorNode.parentNode);
                   var endElem=jQuery(selObj.focusNode.parentNode);
-                  endElem.addClass('end-sel');
+                  endElem.addClass('end-sel'); retObj['endElem']=endElem;
                   //==DISCOVER DRAG DIRECTION AND HOW MANY ROWS SELECTION SPANS==
                   //decide what direction the selectino was dragged
                   var direction=''; var rowSpan=1;
@@ -422,6 +435,8 @@ var cleanEditor={
                       uibody.find('.sel').not(startElem).removeClass('sel');
                       //select the single character
                       startElem.addClass('sel');
+                      //should put the cursor to the left of the selected character
+                      retObj['cur_pos']='left';
                       break;
                     case 'right': //cursor drag to the right
                       whileNext(startElem,'right');
@@ -435,6 +450,7 @@ var cleanEditor={
                         //select the last row up until the last character element
                         whileNext(endTr.children('td.code:last').children(':first'),'right');
                       }
+                      retObj['cur_pos']='right';
                       //replace new-sel classes with sel class
                       finishNewSel();
                       break;
@@ -450,6 +466,7 @@ var cleanEditor={
                         //select the last row up until the last character element
                         whileNext(endTr.children('td.code:last').children(':last'),'left');
                       }
+                      retObj['cur_pos']='left';
                       //replace new-sel classes with sel class
                       finishNewSel();
                       break;
@@ -458,6 +475,97 @@ var cleanEditor={
                 }
               }
             }
+            return retObj;
+          };
+          //function to move the UI cursor either left or right of a character element
+          var setUiCurByChar=function(e,elem){
+            var didSet=false;
+            //if nothing is selected (the cursor is already set when text is selected)
+            if(uibody.find('tr td.code > .sel:first').length<1){
+              didSet=true;
+              //get the cursor
+              var cr=getCur();
+              //is the mouse closer to the left or right of the char elem
+              var closerEdge=findCloserEdgeX(e,elem);
+              //if closer to the left edge (or centered)
+              if(closerEdge.indexOf('left')==0||closerEdge.indexOf('center')==0){
+                //put the cursor to the LEFT of the character element
+                elem.before(cr);
+              }else{
+                //closer to the right edge...
+
+                //put the cursor to the RIGHT of the character element
+                elem.after(cr);
+              }
+            }
+            return didSet;
+          };
+          //set the ui cursor at the end of a td.code line
+          var setUiCurAtLineEnd=function(lineTd){
+            var didSet=false;
+            //if nothing is selected (the cursor is already set when text is selected)
+            if(uibody.find('tr td.code > .sel:first').length<1){
+              didSet=true;
+              //get the cursor
+              var cr=getCur();
+              //put the cursor at the end of the given line
+              lineTd.append(cr);
+            }
+            return didSet;
+          };
+          //set the cursor at the start of the document
+          var setUiCurAtStart=function(){
+            var didSet=false;
+            //if nothing is selected (the cursor is already set when text is selected)
+            if(uibody.find('tr td.code > .sel:first').length<1){
+              didSet=true;
+              //get the cursor
+              var cr=getCur();
+              //get the first code line
+              var firstLineTd=uibody.find('tr td.code:first');
+              firstLineTd.prepend(cr);
+            }
+            return didSet;
+          };
+          //set the cursor inside the textarea, aligned with the UI cursor
+          var setTextareaCaret=function(){
+            //if no UI text is selected
+            if(uibody.find('tr td.code > .sel:first').length<1){
+              //add temporary classes to help count number of characters appearing BEFORE the cursor
+              var uiCur=getCur(); uiCur.addClass('cur');
+              var curTd=uiCur.parent(); curTd.addClass('cur');
+              //==COUNT THE NUMBER OF CHARACTERS THAT APPEAR BEFORE THE UI CURSOR==
+              var caretPos=0;
+              //for each td.code element, BEFORE the one that contains the cursor
+              uibody.find('tr td.code').each(function(){
+                //if this code line contains the cursor
+                if(jQuery(this).hasClass('cur')){
+                  //count all of the characters, UP TO the cursor
+                  jQuery(this).children().each(function(){
+                    //if this is the cursor
+                    if(jQuery(this).hasClass('cur')){
+                      //end counting characters in this line
+                      return false;
+                    }else{
+                      //count this character that appears BEFORE the cursor in this line
+                      caretPos++;
+                    }
+                  });
+                  //end counting code lines
+                  return false;
+                }else{
+                  //cursor is NOT in this code line... so add all of the characters in this line to the count
+                  caretPos+=jQuery(this).children().length+1; //+1 for the newline character
+                }
+              });
+              //==SET THE CURSOR POSITION IN THE HIDDEN TEXTAREA==
+              //if the cursor is NOT already at the correct position
+              if(ta[0].selectionStart!=caretPos){
+                //set the new caret position in the textarea
+                ta[0].setSelectionRange(caretPos, caretPos);
+              }
+              uiCur.removeClass('cur'); curTd.removeClass('cur');
+            }
           };
           //function to duplicate UI selection into the hidden textarea's selection
           var setTextareaSelected=function(){
@@ -465,7 +573,7 @@ var cleanEditor={
             var selectionStart=0;var selectionEnd=0; var foundFirstSel=false;
             //get all rows and all characters
             var allRows=uibody.children('tr');
-            var allChars=allRows.children('td.code').children();
+            var allChars=allRows.children('td.code').children().not('c');
             //count the number of characters BEFORE the first selected
             allChars.each(function(c){
               //if this character is selected
@@ -505,7 +613,17 @@ var cleanEditor={
           //handle when the selecting of letters stops
           var selectStop=function(){
             //set the selection class on UI characters (that are in the selection range)
-            setUiSelected();
+            var selObj=setUiSelected();
+            //if selection info is found
+            if(selObj!=undefined){
+              var cr=getCur();
+              //put the cursor somewhere around the selection
+              if(selObj.cur_pos=='left'){
+                selObj.endElem.before(cr);
+              }else{
+                selObj.endElem.after(cr);
+              }
+            }
             //align textarea with the UI selection
             setTextareaSelected();
           };
@@ -571,6 +689,14 @@ var cleanEditor={
           wrap.click(function(e){
             stopBubbleUp(e);
             focusOn(e,jQuery(this));
+            //if NOT dragging
+            if(!wrap.hasClass('drag')){
+              //set the cursor at the start of the document
+              if(setUiCurAtStart()){
+                //update the cursor position
+                setTextareaCaret();
+              }
+            }
             //***
           });
           //keydown textarea
@@ -647,6 +773,14 @@ var cleanEditor={
             });
             lineTd.click(function(e){
               stopBubbleUp(e); focusOn(e,jQuery(this));
+              //if NOT dragging
+              if(!wrap.hasClass('drag')){
+                //set the cursor at the end of this line
+                if(setUiCurAtLineEnd(jQuery(this))){
+                  //update the cursor position
+                  setTextareaCaret();
+                }
+              }
               //***
             });
             lineTd.mousedown(function(e){
@@ -681,6 +815,14 @@ var cleanEditor={
             });
             lineChars.click(function(e){
               stopBubbleUp(e); focusOn(e,jQuery(this));
+              //if NOT dragging
+              if(!wrap.hasClass('drag')){
+                //move the cursor next to this character element
+                if(setUiCurByChar(e,jQuery(this))){
+                  //update the cursor position
+                  setTextareaCaret();
+                }
+              }
               //***
             });
             //==TEXT HIGHLIGHTER==
