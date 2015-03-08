@@ -513,6 +513,19 @@ var cleanEditor={
             }
             return didSet;
           };
+          //set the ui cursor at the start of a td.code line
+          var setUiCurAtLineStart=function(lineTd){
+            var didSet=false;
+            //if nothing is selected (the cursor is already set when text is selected)
+            if(uibody.find('tr td.code > .sel:first').length<1){
+              didSet=true;
+              //get the cursor
+              var cr=getCur();
+              //put the cursor at the end of the given line
+              lineTd.prepend(cr);
+            }
+            return didSet;
+          };
           //set the cursor at the start of the document
           var setUiCurAtStart=function(){
             var didSet=false;
@@ -763,6 +776,14 @@ var cleanEditor={
             //add the new row's events
             numTd.click(function(e){
               stopBubbleUp(e); focusOn(e,jQuery(this));
+              //if NOT dragging
+              if(!wrap.hasClass('drag')){
+                //set the cursor at the end of this line
+                if(setUiCurAtLineStart(jQuery(this).next('td.code:first'))){
+                  //update the cursor position
+                  setTextareaCaret();
+                }
+              }
               //***
             });
             numTd.select(function(e){
