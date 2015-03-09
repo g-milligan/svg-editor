@@ -132,6 +132,180 @@ var cleanEditor={
             }
             return cursorElem;
           };
+          //function that counts the number of characters BEFORE a given character element
+          var getPos=function(charElem){
+            var pos=0;
+            //add temporary classes to help count number of characters appearing BEFORE the target
+            charElem.addClass('target');
+            var lineTd=charElem.parent(); lineTd.addClass('target');
+            //for each td.code element, BEFORE the one that contains the target
+            uibody.find('tr td.code').each(function(){
+              //if this code line contains the target
+              if(jQuery(this).hasClass('target')){
+                //count all of the characters, UP TO the target
+                jQuery(this).children().each(function(){
+                  //if this is the target
+                  if(jQuery(this).hasClass('target')){
+                    //end counting characters in this line
+                    return false;
+                  }else{
+                    //not the target...
+
+                    //if this is NOT the cursor
+                    if(jQuery(this)[0].tagName.toLowerCase()!='c'){
+                      //count this character that appears BEFORE the target in this line
+                      pos++;
+                    }
+                  }
+                });
+                //end counting code lines
+                return false;
+              }else{
+                //target is NOT in this code line... so add all of the characters in this line to the count
+                pos+=jQuery(this).children().not('c').length+1; //+1 for the newline character
+              }
+            });
+            //remove temporary helper classes
+            charElem.removeClass('target'); lineTd.removeClass('target');
+            return pos;
+          };
+          //function to count the number of characters BETWEEN AND INCLUDING two character elements
+          var getRange=function(startChar, lastChar){
+            var range=0;
+            //temporary search class
+            var firstTd=startChar.parent();
+            //if end char defined (otherwise, just get range until the end)
+            var lastTd;
+            if(lastChar!=undefined){
+              lastTd=lastChar.parent();
+              lastChar.addClass('target'); lastTd.addClass('target');
+            }
+            //if the startChar and endChar are NOT the same characters
+            if(!startChar.hasClass('target')){
+              //==COUNT CHARACTERS AFTER THE START CHARACTER, IN THE FIRST CODE LINE==
+              //if NOT starting with the cursor
+              if(startChar[0].tagName.toLowerCase()!='c'){
+                range++;
+              }
+              //for each character in the startChar's row (up until the end of the row OR the endChar)
+              while(startChar!=undefined){
+                startChar=startChar.next();
+                //if end of the code line
+                if(startChar.length<1){
+                  range++; //one more for the new line character
+                  startChar=undefined;
+                }else{
+                  //if NOT the cursor
+                  if(startChar[0].tagName.toLowerCase()!='c'){
+                    range++;
+                  }
+                  //if this is the lastChar
+                  if(startChar.hasClass('target')){
+                    startChar=undefined;
+                  }
+                }
+              }
+              //==COUNT CHARACTERS IN EACH ROW THAT DOESN'T CONTAIN THE LAST CHARACTER
+              //if the first row isn't also the last row
+              var more=false;
+              if(!firstTd.hasClass('target')){
+                more=true;
+                while(firstTd!=undefined){
+                  //next code line
+                  firstTd=firstTd.parent().next().children('td.code:last');
+                  //if there is a next code line
+                  if(firstTd.length>0){
+                    //if NOT the code line that contains lastChar
+                    if(!firstTd.hasClass('target')){
+                      //count all of the characters in this line
+                      range+=firstTd.children().not('c').length+1; //+1 for the new line character
+                    }else{
+                      //don't count this entire row... it is the target row
+                      firstTd=undefined;
+                    }
+                  }else{
+                    //no next code line...
+                    firstTd=undefined;
+                    more=false;
+                  }
+                }
+              }
+              //==COUNT CHARACTERS BEFORE THE END CHARACTER, IN THE LAST CODE LINE==
+              //if not already counted the LAST code line
+              if(more){
+                //if there is a last code line given
+                if(lastTd!=undefined&&lastTd.length>0){
+                  //for each character up until the last
+                  lastTd.children().each(function(){
+                    //if this is the last character
+                    if(jQuery(this).hasClass('target')){
+                      //add one to the range count
+                      range++;
+                      //force the count to end
+                      return false;
+                    }else{
+                      //not the last character... if NOT the cursor
+                      if(jQuery(this)[0].tagName.toLowerCase()!='c'){
+                        //add one to the range count
+                        range++;
+                      }
+                    }
+                  });
+                }
+              }
+            }else{
+              //startChar is the endChar...
+
+              //if NOT the cursor
+              if(startChar[0].tagName.toLowerCase()!='c'){
+                range++;
+              }
+            }
+            //remove temporary search class
+            lastChar.removeClass('target'); lastTd.removeClass('target');
+            return range;
+          };
+          //count the number of characters that appear before the cursor in the UI
+          var cursorPos;
+          var getCurPos=function(movePosSum){
+            //if adding to the previous position
+            if(movePosSum!=undefined){
+              if(cursorPos==undefined){cursorPos=0;}
+              //either add or subtract from the previous cursor position
+              cursorPos+=movePosSum;
+            }else{
+              //get the current position, as it appears in the UI...
+
+              //if the cursor position is NOT cached
+              if(cursorPos==undefined){
+                //count the number of characters that appear BEFORE the cursor
+                var cr=getCur();
+                cursorPos=getPos(cr);
+              }
+            }
+            return cursorPos;
+          };
+          //get the selection range (start and end pos)
+          var selRange;
+          var getSelRange=function(){
+            //if the range is NOT cached
+            if(selRange==undefined){
+              //if there is a first selected character
+              var firstSelChar=uibody.find('tr td.code > .sel:first');
+              if(firstSelChar.length>0){
+                //==GET THE POSITION OF THE FIRST SELECTED CHARACTER==
+                //get the start position of the first selected character
+                var startPos=getPos(firstSelChar);
+                //==COUNT UP TO THE LAST SELECTED CHARACTER==
+                var lastSelChar=uibody.find('tr td.code > .sel:last');
+                var range=getRange(firstSelChar,lastSelChar);
+                var endPos=startPos+range;
+                //==SET THE START AND END POSITIONS==
+                selRange={'start':startPos,'end':endPos};
+              }
+            }
+            return selRange;
+          };
           //when the editor is double clicked
           var dblClick=function(e,elem){
 
@@ -545,6 +719,8 @@ var cleanEditor={
               //get the first code line
               var firstLineTd=uibody.find('tr td.code:first');
               firstLineTd.prepend(cr);
+              //set the cursor position value
+              cursorPos=0;
             }
             return didSet;
           };
@@ -552,83 +728,28 @@ var cleanEditor={
           var setTextareaCaret=function(){
             //if no UI text is selected
             if(uibody.find('tr td.code > .sel:first').length<1){
-              //add temporary classes to help count number of characters appearing BEFORE the cursor
-              var uiCur=getCur(); uiCur.addClass('cur');
-              var curTd=uiCur.parent(); curTd.addClass('cur');
               //==COUNT THE NUMBER OF CHARACTERS THAT APPEAR BEFORE THE UI CURSOR==
-              var caretPos=0;
-              //for each td.code element, BEFORE the one that contains the cursor
-              uibody.find('tr td.code').each(function(){
-                //if this code line contains the cursor
-                if(jQuery(this).hasClass('cur')){
-                  //count all of the characters, UP TO the cursor
-                  jQuery(this).children().each(function(){
-                    //if this is the cursor
-                    if(jQuery(this).hasClass('cur')){
-                      //end counting characters in this line
-                      return false;
-                    }else{
-                      //count this character that appears BEFORE the cursor in this line
-                      caretPos++;
-                    }
-                  });
-                  //end counting code lines
-                  return false;
-                }else{
-                  //cursor is NOT in this code line... so add all of the characters in this line to the count
-                  caretPos+=jQuery(this).children().length+1; //+1 for the newline character
-                }
-              });
+              var caretPos=getCurPos();
               //==SET THE CURSOR POSITION IN THE HIDDEN TEXTAREA==
               //if the cursor is NOT already at the correct position
               if(ta[0].selectionStart!=caretPos){
                 //set the new caret position in the textarea
                 ta[0].setSelectionRange(caretPos, caretPos);
               }
-              uiCur.removeClass('cur'); curTd.removeClass('cur');
             }
           };
           //function to duplicate UI selection into the hidden textarea's selection
           var setTextareaSelected=function(){
-            //==COUNT THE SELECT START AND END INDEXES==
-            var selectionStart=0;var selectionEnd=0; var foundFirstSel=false;
-            //get all rows and all characters
-            var allRows=uibody.children('tr');
-            var allChars=allRows.children('td.code').children().not('c');
-            //count the number of characters BEFORE the first selected
-            allChars.each(function(c){
-              //if this character is selected
-              if(jQuery(this).hasClass('sel')){
-                //mark the first selected row
-                jQuery(this).parents('tr:first').addClass('start-sel');
-                foundFirstSel=true;
-                //end the counting
-                return false;
-              }else{
-                selectionStart++;
-                //if this is the last character in this row
-                if(jQuery(this).next().length<1){
-                  //count the extra newline character
-                  selectionStart++;
-                }
-              }
-            });
-            if(foundFirstSel){
-              //get the select end index
-              selectionEnd=selectionStart+allChars.filter('.sel').length;
-              //count the number of newline characters INSIDE the selection
-              var lastSelChar=allChars.filter('.sel:last');
-              var lastSelRow=lastSelChar.parents('tr:first');
-              while(!lastSelRow.hasClass('start-sel')){
-                //one more new line character
-                selectionEnd++;
-                lastSelRow=lastSelRow.prev();
-              }
-              lastSelRow.removeClass('start-sel');
-              //==SET THE SELECTION START AND END INDEXES IN THE TEXTAREA
+            //get the start and end positions of the selection range
+            var range=getSelRange();
+            if(range!=undefined){
               //set the textarea selection range
-              ta[0].selectionStart=selectionStart;
-              ta[0].selectionEnd=selectionEnd;
+              if(range.start!=ta[0].selectionStart){
+                ta[0].selectionStart=range.start;
+              }
+              if(range.end!=ta[0].selectionEnd){
+                ta[0].selectionEnd=range.end;
+              }
             }
           };
           //handle when the selecting of letters stops
@@ -646,6 +767,7 @@ var cleanEditor={
               }
             }
             //align textarea with the UI selection
+            selRange=undefined;
             setTextareaSelected();
           };
           //deselect any selected ui letters
@@ -714,6 +836,8 @@ var cleanEditor={
             if(!wrap.hasClass('drag')){
               //set the cursor at the start of the document
               if(setUiCurAtStart()){
+                //reset the cursor position value
+                cursorPos=undefined;
                 //update the cursor position
                 setTextareaCaret();
               }
@@ -787,6 +911,8 @@ var cleanEditor={
               if(!wrap.hasClass('drag')){ //*** select line instead of set cursor?
                 //set the cursor at the end of this line
                 if(setUiCurAtLineStart(jQuery(this).next('td.code:first'))){
+                  //reset the cursor position value
+                  cursorPos=undefined;
                   //update the cursor position
                   setTextareaCaret();
                 }
@@ -804,6 +930,8 @@ var cleanEditor={
               if(!wrap.hasClass('drag')){
                 //set the cursor at the end of this line
                 if(setUiCurAtLineEnd(jQuery(this))){
+                  //reset the cursor position value
+                  cursorPos=undefined;
                   //update the cursor position
                   setTextareaCaret();
                 }
@@ -845,6 +973,8 @@ var cleanEditor={
               if(!wrap.hasClass('drag')){
                 //move the cursor next to this character element
                 if(setUiCurByChar(e,jQuery(this))){
+                  //reset the cursor position value
+                  cursorPos=undefined;
                   //update the cursor position
                   setTextareaCaret();
                 }

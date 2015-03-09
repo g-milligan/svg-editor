@@ -37,8 +37,8 @@ cleaneditor editorui td.code > c:before{background-color:#000;}
 cleaneditor.drag-sel editorui td.code > c:before{box-shadow:0 0 .5rem rgb(0, 137, 178);}
 
 
-cleaneditor editorui t{letter-spacing:3rem;}
-cleaneditor editorui sp{letter-spacing:1rem;}
+cleaneditor editorui t{letter-spacing:1.7rem;}
+cleaneditor editorui sp{letter-spacing:.7rem;}
 
 
 /*debug testing*/
