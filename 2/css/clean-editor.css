@@ -18,8 +18,7 @@ cleaneditor.drag-sel editorui table.ui-table tr td.code{cursor:pointer;}
 @-o-keyframes "blink"{from,to{opacity:.01;}50%{opacity:1;}}
 cleaneditor editorui table.ui-table tr td.code > c{position:relative;overflow:visible;width:0;
   -webkit-animation:.85s blink linear infinite;-moz-animation:.85s blink linear infinite;-ms-animation:.85s blink linear infinite;-o-animation:.85s blink linear infinite;animation:.85s blink linear infinite;}
-cleaneditor.drag-sel editorui table.ui-table tr td.code > c{width:.2rem;
-  -webkit-animation:none;-moz-animation:none;-ms-animation:none;-o-animation:none;animation:none;}
+cleaneditor.drag-sel editorui table.ui-table tr td.code > c{-webkit-animation:none;-moz-animation:none;-ms-animation:none;-o-animation:none;animation:none;}
 cleaneditor editorui table.ui-table tr td.code > c:before{content:"";width:2px;height:100%;font-family:'Arial Black','Arial Bold',Gadget,sans-serif;font-weight:bold;display:block;font-size:110%;position:absolute;top:-10%;bottom:-10%;left:0;right:0;margin:auto;}
 /*disable the default selection display in the ui*/
 cleaneditor editorui table.ui-table *{-webkit-user-select:none;-khtml-user-select:none;-moz-user-select:-moz-none;-o-user-select:none;user-select:none;}

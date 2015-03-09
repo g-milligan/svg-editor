@@ -374,16 +374,64 @@ var cleanEditor={
               wrap.removeClass('drag');
             }
           };
+          //deselect any selected ui letters
+          var deselect=function(){
+            //remove selection from ui elements
+            if(uibody.find('tr td.code .sel').removeClass('sel').length>0){
+              //remove selection from hidden textarea
+              ta[0].selectionStart=ta[0].selectionEnd=-1;
+            }
+          };
           //drop the drag-selected text onto the current cursor position
           var follow_drag_timeout;
           var dropAtCursor=function(){
             clearTimeout(follow_drag_timeout);
-            //*** use range.start and range.end
-            var range=getSelRange();
-            var selChars=uibody.find('tr td.code > .sel');
-            //*** use pos
-            var pos=getCurPos();
+            var didDrop=false;
+            //get the cursor element
             var cr=getCur();
+            //if the cursor is NOT IN or ADJACENT to selected characters
+            if(!cr.next().hasClass('sel')){
+              if(!cr.prev().hasClass('sel')){
+                //if the cursor does NOT have the selected class (it shouldn't)
+                if(!cr.hasClass('sel')){
+                  //==UPDATE THE HIDDEN TEXT AREA==
+                  //get the selection range and the position where the selection should be moved
+                  var range=getSelRange();
+                  var pos=getCurPos();
+                  //get the selected text that will be moved
+                  var selTxt=ta.val().slice(range.start,range.end);
+                  //get the insert position that will be used after the selected text is removed, temporarily
+                  var newPos=pos;
+                  //if the drop position is AFTER the selected text, then adjust the drop index to be MINUS the temporarily removed text length
+                  var selLen=selTxt.length;
+                  if(newPos>range.start){newPos-=selLen;}
+                  //remove the selected text, temporarily
+                  var newTxt=ta.val().substring(0,range.start)+ta.val().substring(range.end);
+                  //split the text at the index where the selected text will be inserted
+                  var txtBeforeIns=newTxt.substring(0,newPos);
+                  var txtAfterIns=newTxt.substring(newPos);
+                  newTxt=undefined; //drop in memory
+                  //insert the selected text at the new position and update the textarea value
+                  ta.val(txtBeforeIns+selTxt+txtAfterIns); txtAfterIns=undefined; txtBeforeIns=undefined; selTxt=undefined;
+                  //==UPDATE THE CURSOR POSITION AND SELECTION RANGE INDEXES==
+                  cursorPosition=newPos; selRange.start=newPos; selRange.end=newPos+selLen;
+                  //==SELECT THE MOVED TEXT IN THE TEXT AREA==
+                  ta[0].selectionStart=selRange.start;
+                  ta[0].selectionEnd=selRange.end;
+                  //==UPDATE THE UI== ***
+                  //get the selected UI characters
+                  var selChars=uibody.find('tr td.code > .sel');
+                  //move the selected elements to the right of the cursor element
+                  cr.after(selChars);
+                  //drop done
+                  didDrop=true;
+                }
+              }
+            }
+            //if did not drop, eg: just clicked on selected text without dragging
+            if(!didDrop){
+              deselect();
+            }
           };
           //figures out if the mouse curor is closer to the right or left edge of an element
           var findCloserEdgeX=function(e,elem){
@@ -773,14 +821,6 @@ var cleanEditor={
             //align textarea with the UI selection
             selRange=undefined;
             setTextareaSelected();
-          };
-          //deselect any selected ui letters
-          var deselect=function(){
-            //remove selection from ui elements
-            if(uibody.find('tr td.code .sel').removeClass('sel').length>0){
-              //remove selection from hidden textarea
-              ta[0].selectionStart=ta[0].selectionEnd=-1;
-            }
           };
         //==ATTACH EVENTS==
           //mouse up event
