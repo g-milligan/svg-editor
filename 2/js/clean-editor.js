@@ -378,8 +378,12 @@ var cleanEditor={
           var follow_drag_timeout;
           var dropAtCursor=function(){
             clearTimeout(follow_drag_timeout);
+            //*** use range.start and range.end
+            var range=getSelRange();
+            var selChars=uibody.find('tr td.code > .sel');
+            //*** use pos
+            var pos=getCurPos();
             var cr=getCur();
-            //***
           };
           //figures out if the mouse curor is closer to the right or left edge of an element
           var findCloserEdgeX=function(e,elem){
@@ -787,6 +791,7 @@ var cleanEditor={
               dragStop(e);
               //if dragging selected text, NOT selecting new text
               if(wrap.hasClass('drag-sel')){
+                cursorPos=undefined;
                 dropAtCursor();
                 dragSelStop(e);
               }else{
