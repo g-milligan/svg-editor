@@ -8,7 +8,9 @@ cleaneditor editorui table.ui-table tr td > *{line-height:inherit;vertical-align
 cleaneditor td.num{cursor:pointer;}
 cleaneditor editorui table.ui-table tr td.code{font-size:0;cursor:text;}
 cleaneditor editorui table.ui-table tr td.code .sel{cursor:pointer;}
-cleaneditor.drag-sel editorui{cursor:not-allowed;}
+cleaneditor.drop-on-sel editorui table.ui-table tr td.code .sel{cursor:no-drop;
+  -webkit-transition:background-color .2s linear;-moz-transition:background-color .2s linear;-ms-transition:background-color .2s linear;-o-transition:background-color .2s linear;transition:background-color .2s linear;;}
+cleaneditor.drag-sel editorui{cursor:no-drop;}
 cleaneditor.drag-sel editorui table.ui-table tr td.code{cursor:pointer;}
 /*cursor*/
 @keyframes "blink"{from,to{opacity:.01;}50%{opacity:1;}}
@@ -32,6 +34,7 @@ cleaneditor editorui td.num:hover{background-color:#ddd;}
 cleaneditor editorui td.num:after{content:"."}
 cleaneditor editorui td.code *{font-size:1rem;}
 cleaneditor editorui td.code .sel{background-color:rgb(0, 137, 178);color:#fff;}
+cleaneditor.drop-on-sel editorui td.code .sel{background-color:rgb(0, 91, 118);}
 cleaneditor editorui td.code > c:before{background-color:#000;}
 cleaneditor.drag-sel editorui td.code > c:before{box-shadow:0 0 .5rem rgb(0, 137, 178);}
 

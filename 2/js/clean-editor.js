@@ -358,6 +358,8 @@ var cleanEditor={
             if(wrap.hasClass('drag-sel')){
               //stop allowing dragging selected to be detected
               wrap.removeClass('drag-sel');
+              //make sure the class indicator for trying to drop selected on itself is removed
+              wrap.removeClass('drop-on-sel');
             }
           };
           //when the mouse down happens on a letter, or should happen
@@ -384,7 +386,7 @@ var cleanEditor={
           };
           //drop the drag-selected text onto the current cursor position
           var follow_drag_timeout;
-          var dropAtCursor=function(){
+          var dropAtCursor=function(e){
             clearTimeout(follow_drag_timeout);
             var didDrop=false;
             //get the cursor element
@@ -428,10 +430,7 @@ var cleanEditor={
                 }
               }
             }
-            //if did not drop, eg: just clicked on selected text without dragging
-            if(!didDrop){
-              deselect();
-            }
+            return didDrop;
           };
           //figures out if the mouse curor is closer to the right or left edge of an element
           var findCloserEdgeX=function(e,elem){
@@ -713,68 +712,42 @@ var cleanEditor={
           };
           //function to move the UI cursor either left or right of a character element
           var setUiCurByChar=function(e,elem){
-            var didSet=false;
-            //if nothing is selected (the cursor is already set when text is selected)
-            if(uibody.find('tr td.code > .sel:first').length<1){
-              didSet=true;
-              //get the cursor
-              var cr=getCur();
-              //is the mouse closer to the left or right of the char elem
-              var closerEdge=findCloserEdgeX(e,elem);
-              //if closer to the left edge (or centered)
-              if(closerEdge.indexOf('left')==0||closerEdge.indexOf('center')==0){
-                //put the cursor to the LEFT of the character element
-                elem.before(cr);
-              }else{
-                //closer to the right edge...
+            //get the cursor
+            var cr=getCur();
+            //is the mouse closer to the left or right of the char elem
+            var closerEdge=findCloserEdgeX(e,elem);
+            //if closer to the left edge (or centered)
+            if(closerEdge.indexOf('left')==0||closerEdge.indexOf('center')==0){
+              //put the cursor to the LEFT of the character element
+              elem.before(cr);
+            }else{
+              //closer to the right edge...
 
-                //put the cursor to the RIGHT of the character element
-                elem.after(cr);
-              }
+              //put the cursor to the RIGHT of the character element
+              elem.after(cr);
             }
-            return didSet;
           };
           //set the ui cursor at the end of a td.code line
           var setUiCurAtLineEnd=function(lineTd){
-            var didSet=false;
-            //if nothing is selected (the cursor is already set when text is selected)
-            if(uibody.find('tr td.code > .sel:first').length<1){
-              didSet=true;
-              //get the cursor
-              var cr=getCur();
-              //put the cursor at the end of the given line
-              lineTd.append(cr);
-            }
-            return didSet;
+            //get the cursor
+            var cr=getCur();
+            //put the cursor at the end of the given line
+            lineTd.append(cr);
           };
           //set the ui cursor at the start of a td.code line
           var setUiCurAtLineStart=function(lineTd){
-            var didSet=false;
-            //if nothing is selected (the cursor is already set when text is selected)
-            if(uibody.find('tr td.code > .sel:first').length<1){
-              didSet=true;
-              //get the cursor
-              var cr=getCur();
-              //put the cursor at the end of the given line
-              lineTd.prepend(cr);
-            }
-            return didSet;
+            //get the cursor
+            var cr=getCur();
+            //put the cursor at the end of the given line
+            lineTd.prepend(cr);
           };
           //set the cursor at the start of the document
-          var setUiCurAtStart=function(){
-            var didSet=false;
-            //if nothing is selected (the cursor is already set when text is selected)
-            if(uibody.find('tr td.code > .sel:first').length<1){
-              didSet=true;
-              //get the cursor
-              var cr=getCur();
-              //get the first code line
-              var firstLineTd=uibody.find('tr td.code:first');
-              firstLineTd.prepend(cr);
-              //set the cursor position value
-              cursorPos=0;
-            }
-            return didSet;
+          var setUiCurAtEnd=function(){
+            //get the cursor
+            var cr=getCur();
+            //get the last code line
+            var lastLineTd=uibody.find('tr td.code:last');
+            lastLineTd.append(cr);
           };
           //set the cursor inside the textarea, aligned with the UI cursor
           var setTextareaCaret=function(){
@@ -804,44 +777,36 @@ var cleanEditor={
               }
             }
           };
-          //handle when the selecting of letters stops
-          var selectStop=function(e){
-            //set the selection class on UI characters (that are in the selection range)
-            var selObj=setUiSelected(e);
-            //if selection info is found
-            if(selObj!=undefined){
-              var cr=getCur();
-              //put the cursor somewhere around the selection
-              if(selObj.cur_pos=='left'){
-                selObj.endElem.before(cr);
-              }else{
-                selObj.endElem.after(cr);
-              }
+          //handle a mouse up event over editor elements
+          var editorMouseRelease=function(e,elem,setUiCursorSingleClick){
+            stopBubbleUp(e); focusOn(e,elem);
+            //stop drag because the mouse was released
+            dragStop(e);
+            //==NO SELECTION, SINGLE CLICK TO SET THE CURSOR==
+            if(uibody.find('tr td.code > .sel:first').length<1){
+              //set the cursor
+              setUiCursorSingleClick();
+              //reset the textarea's cursor position value
+              cursorPos=undefined;
+              //update the textarea's cursor position
+              setTextareaCaret();
+            //==DROP THE DRAGGED TEXT SELECTION==
+            }else if(wrap.hasClass('drag-sel')){
+              //drop the selection at the new position
+              cursorPos=undefined; dropAtCursor(e); dragSelStop(e);
+            //one or more letters are selected...
+            }else{
+              //==FINISH DRAGGING TO SELECT TEXT==
+              //align textarea with the UI selection
+              selRange=undefined; setTextareaSelected();
             }
-            //align textarea with the UI selection
-            selRange=undefined;
-            setTextareaSelected();
           };
         //==ATTACH EVENTS==
           //mouse up event
           jQuery('body:first').mouseup(function(e){
-            //if dragging cursor
-            if(wrap.hasClass('drag')){
-              //stop dragging
-              dragStop(e);
-              //if dragging selected text, NOT selecting new text
-              if(wrap.hasClass('drag-sel')){
-                cursorPos=undefined;
-                dropAtCursor();
-                dragSelStop(e);
-              }else{
-                //NOT dragging selected text... stop selecting text
-                selectStop(e);
-              }
-            }else{
-              //NOT dragging at all... deselect text if any is selected
-              deselect();
-            }
+            dragStop(e);
+            dragSelStop(e);
+            deselect();
           });
           jQuery('body:first').mouseleave(function(e){
             dragStop(e);
@@ -858,6 +823,12 @@ var cleanEditor={
               }
             }
           });
+          wrap.mouseup(function(e){
+            editorMouseRelease(e,wrap,function(){
+              //set the cursor at the end of the document
+              setUiCurAtEnd();
+            });
+          });
           //src text gains focus by itself (tab entry?)
           ta.focus(function(e){
             stopBubbleUp(e);
@@ -871,21 +842,6 @@ var cleanEditor={
             if(uibody.find('.over:first').length<1){
               //deselect any ui text (if any is selected)
               deselect();
-            }
-          });
-          //click outer wrap
-          wrap.click(function(e){
-            stopBubbleUp(e);
-            focusOn(e,jQuery(this));
-            //if NOT dragging
-            if(!wrap.hasClass('drag')){
-              //set the cursor at the start of the document
-              if(setUiCurAtStart()){
-                //reset the cursor position value
-                cursorPos=undefined;
-                //update the cursor position
-                setTextareaCaret();
-              }
             }
           });
           //keydown textarea
@@ -950,18 +906,12 @@ var cleanEditor={
             var numTd=newRow.children('td:first'); var lineTd=newRow.children('td:last');
             var lineChars=lineTd.children();
             //add the new row's events
-            numTd.click(function(e){
-              stopBubbleUp(e); focusOn(e,jQuery(this));
-              //if NOT dragging
-              if(!wrap.hasClass('drag')){ //*** select line instead of set cursor?
-                //set the cursor at the end of this line
-                if(setUiCurAtLineStart(jQuery(this).next('td.code:first'))){
-                  //reset the cursor position value
-                  cursorPos=undefined;
-                  //update the cursor position
-                  setTextareaCaret();
-                }
-              }
+            numTd.mouseup(function(e){
+              var td=jQuery(this);
+              editorMouseRelease(e,td,function(){
+                //set the cursor at the end of the code line
+                setUiCurAtLineStart(td.parent().children('td.code:last')); //*** select line instead?
+              });
             });
             numTd.select(function(e){
               stopBubbleUp(e); preventDefault(e);
@@ -969,18 +919,12 @@ var cleanEditor={
             numTd.on('mousemove touchmove',function(e){
               stopBubbleUp(e); preventDefault(e);
             });
-            lineTd.click(function(e){
-              stopBubbleUp(e); focusOn(e,jQuery(this));
-              //if NOT dragging
-              if(!wrap.hasClass('drag')){
-                //set the cursor at the end of this line
-                if(setUiCurAtLineEnd(jQuery(this))){
-                  //reset the cursor position value
-                  cursorPos=undefined;
-                  //update the cursor position
-                  setTextareaCaret();
-                }
-              }
+            lineTd.mouseup(function(e){
+              var td=jQuery(this);
+              editorMouseRelease(e,td,function(){
+                //set the cursor at the end of the code line
+                setUiCurAtLineEnd(td);
+              });
             });
             lineTd.mousedown(function(e){
               deselect();
@@ -1007,23 +951,31 @@ var cleanEditor={
               stopBubbleUp(e);
               jQuery(this).parent().removeClass('over');
               jQuery(this).addClass('over');
+              //if dragging selected text OVER selected text
+              var isDragSel=false;
+              if(jQuery(this).hasClass('sel')){
+                if(wrap.hasClass('drag-sel')){
+                  isDragSel=true;
+                }
+              }
+              if(isDragSel){
+                //dragging selected text OVER selected text
+                wrap.addClass('drop-on-sel');
+              }else{
+                //NOT dragging selected text over selected text
+                wrap.removeClass('drop-on-sel');
+              }
             },function(e){
               stopBubbleUp(e);
               jQuery(this).parent().removeClass('over');
               jQuery(this).removeClass('over');
             });
-            lineChars.click(function(e){
-              stopBubbleUp(e); focusOn(e,jQuery(this));
-              //if NOT dragging
-              if(!wrap.hasClass('drag')){
-                //move the cursor next to this character element
-                if(setUiCurByChar(e,jQuery(this))){
-                  //reset the cursor position value
-                  cursorPos=undefined;
-                  //update the cursor position
-                  setTextareaCaret();
-                }
-              }
+            lineChars.mouseup(function(e){
+              var lineChar=jQuery(this);
+              editorMouseRelease(e,lineChar,function(){
+                //set the cursor adjacent to this letter
+                setUiCurByChar(e,lineChar);
+              });
             });
             //==TEXT HIGHLIGHTER== ?
             //***
