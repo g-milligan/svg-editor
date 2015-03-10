@@ -318,7 +318,7 @@ var cleanEditor={
               //if the src textarea doesn't already have focus
               if(!ta.is(':focus')){
                 //set the focus
-                ta.focus();
+                //+++ta.focus();
               }
             }
           };
@@ -775,11 +775,21 @@ var cleanEditor={
           };
           //handle a mouse up event over editor elements
           var editorMouseRelease=function(e,elem,setUiCursorSingleClick){
-            //stopBubbleUp(e);
+
+
             console.log(elem[0].tagName + ' release');
-            focusOn(e,elem);
+            //update selected letters (if any selected)
+            setUiSelected(e);
+            //stop drag because the mouse was released
+            dragStop(e);
+            //==IF MOUSE UP ON CURSOR==
+            if(elem[0].tagName.toLowerCase()=='c'){
+              //prevent bubble
+              stopBubbleUp(e); //***
             //==NO SELECTION, SINGLE CLICK TO SET THE CURSOR==
-            if(uibody.find('tr td.code > .sel:first').length<1){
+            }else if(uibody.find('tr td.code > .sel:first').length<1){
+              //prevent bubble and set focus
+              stopBubbleUp(e); focusOn(e,elem);
               //set the cursor
               setUiCursorSingleClick();
               //reset the textarea's cursor position value
@@ -788,16 +798,18 @@ var cleanEditor={
               setTextareaCaret();
             //==DROP THE DRAGGED TEXT SELECTION==
             }else if(wrap.hasClass('drag-sel')){
+              //prevent bubble and set focus
+              stopBubbleUp(e); focusOn(e,elem);
               //drop the selection at the new position
               cursorPos=undefined; dropAtCursor(e); dragSelStop(e);
             //one or more letters are selected...
             }else{
               //==FINISH DRAGGING TO SELECT TEXT==
+              //prevent bubble and set focus
+              stopBubbleUp(e); focusOn(e,elem);
               //align textarea with the UI selection
               selRange=undefined; setTextareaSelected();
             }
-            //stop drag because the mouse was released
-            dragStop(e);
           };
         //==ATTACH EVENTS==
           //mouse up event
@@ -805,7 +817,7 @@ var cleanEditor={
             console.log(jQuery(this)[0].tagName + ' release');
             dragStop(e);
             dragSelStop(e);
-            //deselect();
+            deselect();
           });
           jQuery('body:first').mouseleave(function(e){
             dragStop(e);
@@ -821,6 +833,9 @@ var cleanEditor={
                 setUiSelected(e);
               }
             }
+          });
+          wrap.mousedown(function(e){
+            dragStart(e);
           });
           wrap.mouseup(function(e){
             editorMouseRelease(e,wrap,function(){
