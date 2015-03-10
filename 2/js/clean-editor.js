@@ -306,10 +306,6 @@ var cleanEditor={
             }
             return selRange;
           };
-          //when the editor is double clicked
-          var dblClick=function(e,elem){
-
-          };
           //when the editor receives focus or SHOULD receive focus
           var focusOn=function(e,elem){
             //if doesn't already have focus
@@ -779,9 +775,9 @@ var cleanEditor={
           };
           //handle a mouse up event over editor elements
           var editorMouseRelease=function(e,elem,setUiCursorSingleClick){
-            stopBubbleUp(e); focusOn(e,elem);
-            //stop drag because the mouse was released
-            dragStop(e);
+            //stopBubbleUp(e);
+            console.log(elem[0].tagName + ' release');
+            focusOn(e,elem);
             //==NO SELECTION, SINGLE CLICK TO SET THE CURSOR==
             if(uibody.find('tr td.code > .sel:first').length<1){
               //set the cursor
@@ -800,13 +796,16 @@ var cleanEditor={
               //align textarea with the UI selection
               selRange=undefined; setTextareaSelected();
             }
+            //stop drag because the mouse was released
+            dragStop(e);
           };
         //==ATTACH EVENTS==
           //mouse up event
           jQuery('body:first').mouseup(function(e){
+            console.log(jQuery(this)[0].tagName + ' release');
             dragStop(e);
             dragSelStop(e);
-            deselect();
+            //deselect();
           });
           jQuery('body:first').mouseleave(function(e){
             dragStop(e);
