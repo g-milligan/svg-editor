@@ -378,6 +378,8 @@ var cleanEditor={
           var deselect=function(){
             //remove selection from ui elements
             if(uibody.find('tr td.code .sel').removeClass('sel').length>0){
+              //remove nl-sel from tr
+              uibody.children('tr.nl-sel').removeClass('nl-sel');
               //remove selection from hidden textarea
               ta[0].selectionStart=ta[0].selectionEnd=-1;
             }
@@ -650,6 +652,8 @@ var cleanEditor={
                       if(el.hasClass('end-sel')){
                         el=undefined;
                       }else{
+                        //add nl-sel class
+                        el.addClass('nl-sel');
                         //mark characters in this row as new-sel
                         var cTd=el.children('td.code:last');
                         cTd.children().addClass('new-sel');
@@ -658,6 +662,8 @@ var cleanEditor={
                   };
                   //select ALL characters in EACH fully selected row (between first and last row)
                   var whileNextFullRow=function(rEl,dir){
+                    //add nl-sel class
+                    rEl.addClass('nl-sel');
                     //mark characters in this row as new-sel
                     var cTd=rEl.children('td.code:last');
                     cTd.children().addClass('new-sel');
@@ -672,8 +678,10 @@ var cleanEditor={
                     //remove previous selection
                     uibody.find('tr td.code > .sel').not('.new-sel').removeClass('sel');
                     //set new selection (and remove new-sel)
-                    uibody.find('tr td.code > .new-sel').removeClass('new-sel').not('.sel').addClass('sel');
+                    var selElems=uibody.find('tr td.code > .new-sel').removeClass('new-sel').not('.sel').addClass('sel');
                   };
+                  //clear nl-sel classes
+                  uibody.children('.nl-sel').removeClass('nl-sel');
                   //depending on the direction
                   switch(direction){
                     case 'none': //no direction; only one character selected
@@ -681,6 +689,11 @@ var cleanEditor={
                       uibody.find('tr td.code > .sel').not(startElem).removeClass('sel');
                       //select the single character
                       startElem.addClass('sel');
+                      //if this is a newline character
+                      if(startElem[0].tagName.toLowerCase()=='nl'){
+                        //add nl-sel class
+                        startTr.addClass('nl-sel');
+                      }
                       //should the cursor be to the right or left?
                       var closerEdge=findCloserEdgeX(e,startElem);
                       //if the cursor is closer to the left edge of the selection
@@ -696,6 +709,8 @@ var cleanEditor={
                       whileNext(startElem,'right');
                       //if MORE than one row was selected
                       if(rowSpan>1){
+                        //add nl-sel class
+                        startTr.addClass('nl-sel');
                         //if more than two rows were selected
                         if(rowSpan>2){
                           //select each full row BETWEEN the first and last row
@@ -717,6 +732,8 @@ var cleanEditor={
                           //select each full row between the first and last row
                           whileNextFullRow(startTr.prev('tr:first'),'left');
                         }
+                        //add nl-sel class
+                        endTr.addClass('nl-sel');
                         //select the last row up until the last character element
                         whileNext(endTr.children('td.code:last').children(':last'),'left');
                       }
@@ -977,9 +994,6 @@ var cleanEditor={
                 setUiCurAtLineStart(td.parent().children('td.code:last')); //*** select line instead?
               });
             });
-            numTd.select(function(e){
-              stopBubbleUp(e); preventDefault(e);
-            });
             numTd.on('mousemove touchmove',function(e){
               stopBubbleUp(e); preventDefault(e);
             });
@@ -990,10 +1004,10 @@ var cleanEditor={
                 setUiCurAtLineEnd(td);
               });
             });
-            lineTd.mousedown(function(e){
+            /*lineTd.mousedown(function(e){
               deselect();
               dragStart(e);
-            });
+            });*/
             lineTd.hover(function(e){
               jQuery(this).addClass('over');
             },function(e){

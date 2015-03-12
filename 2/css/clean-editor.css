@@ -6,7 +6,9 @@ cleaneditor editorui table.ui-table tr{}
 cleaneditor editorui table.ui-table tr td{vertical-align:middle;height:1.4rem;padding:0;}
 cleaneditor editorui table.ui-table tr td > *{line-height:inherit;vertical-align:inherit;height:1.4rem;display:inline-block;line-height:1.4rem;}
 cleaneditor td.num{cursor:pointer;}
-cleaneditor editorui table.ui-table tr td.code{font-size:0;cursor:text;}
+cleaneditor editorui table.ui-table tr td.code{font-size:0;cursor:text;position:relative;white-space:nowrap;}
+cleaneditor editorui table.ui-table tr td.code > nl{display:none;width:1rem;}
+cleaneditor editorui table.ui-table tr.nl-sel td.code > nl{display:inline-block;}
 cleaneditor editorui table.ui-table tr td.code .sel{cursor:pointer;}
 cleaneditor.drop-on-sel editorui table.ui-table tr td.code .sel{cursor:no-drop;
   -webkit-transition:background-color .2s linear;-moz-transition:background-color .2s linear;-ms-transition:background-color .2s linear;-o-transition:background-color .2s linear;transition:background-color .2s linear;;}
@@ -32,7 +34,9 @@ cleaneditor editorui td{}
 cleaneditor editorui td.num{font-size:1rem;width:4rem;text-align:right;border-right:dashed 1px #ccc;background-color:#F0F0F0;color:#ccc;}
 cleaneditor editorui td.num:hover{background-color:#ddd;}
 cleaneditor editorui td.num:after{content:"."}
-cleaneditor editorui td.code *{font-size:1rem;}
+cleaneditor editorui tr td.code{background-color:#fff;}
+cleaneditor editorui tr.nl-sel td.code{background-color:rgb(27, 169, 211);}
+cleaneditor editorui td.code *{font-size:1rem;background-color:#fff;}
 cleaneditor editorui td.code .sel{background-color:rgb(0, 137, 178);/*background-color:red;*/color:#fff;}
 cleaneditor.drop-on-sel editorui td.code .sel{background-color:rgb(0, 91, 118);}
 cleaneditor editorui td.code > c:before{background-color:#000;}
@@ -40,8 +44,8 @@ cleaneditor.drag-sel editorui td.code > c:before{box-shadow:0 0 .5rem rgb(0, 137
 
 
 cleaneditor editorui t{letter-spacing:1.7rem;}
+cleaneditor editorui nl{letter-spacing:1rem;}
 cleaneditor editorui sp{letter-spacing:.7rem;}
-
 
 /*debug testing*/
 cleaneditor.debug editorui{top:100%;border:solid 1px #000;}
