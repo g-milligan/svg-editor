@@ -126,7 +126,7 @@ var cleanEditor={
             if(cursorElem==undefined||cursorElem.length<1){
               cursorElem=uibody.find('tr td.code > c:first');
               if(cursorElem.length<1){
-                uibody.find('tr td.code:last').append('<c></c>');
+                uibody.find('tr td.code:last').children('nl:last').before('<c></c>');
                 cursorElem=uibody.find('tr td.code > c:last');
               }
             }
@@ -162,7 +162,7 @@ var cleanEditor={
                 return false;
               }else{
                 //target is NOT in this code line... so add all of the characters in this line to the count
-                pos+=jQuery(this).children().not('c').length+1; //+1 for the newline character
+                pos+=jQuery(this).children().not('c').length;
               }
             });
             //remove temporary helper classes
@@ -185,6 +185,7 @@ var cleanEditor={
               //==COUNT CHARACTERS AFTER THE START CHARACTER, IN THE FIRST CODE LINE==
               //if NOT starting with the cursor
               if(startChar[0].tagName.toLowerCase()!='c'){
+                //count the first character within the range
                 range++;
               }
               //for each character in the startChar's row (up until the end of the row OR the endChar)
@@ -192,9 +193,10 @@ var cleanEditor={
                 startChar=startChar.next();
                 //if end of the code line
                 if(startChar.length<1){
-                  range++; //one more for the new line character
                   startChar=undefined;
                 }else{
+                  //NOT the end of the first code line...
+
                   //if NOT the cursor
                   if(startChar[0].tagName.toLowerCase()!='c'){
                     range++;
@@ -218,7 +220,7 @@ var cleanEditor={
                     //if NOT the code line that contains lastChar
                     if(!firstTd.hasClass('target')){
                       //count all of the characters in this line
-                      range+=firstTd.children().not('c').length+1; //+1 for the new line character
+                      range+=firstTd.children().not('c').length;
                     }else{
                       //don't count this entire row... it is the target row
                       firstTd=undefined;
@@ -318,7 +320,7 @@ var cleanEditor={
               //if the src textarea doesn't already have focus
               if(!ta.is(':focus')){
                 //set the focus
-                //+++ta.focus();
+                ta.focus();
               }
             }
           };
@@ -416,11 +418,17 @@ var cleanEditor={
                   //==SELECT THE MOVED TEXT IN THE TEXT AREA==
                   ta[0].selectionStart=selRange.start;
                   ta[0].selectionEnd=selRange.end;
-                  //==UPDATE THE UI== ***
+                  //==UPDATE THE UI==
                   //get the selected UI characters
                   var selChars=uibody.find('tr td.code > .sel');
-                  //move the selected elements to the right of the cursor element
-                  cr.after(selChars);
+                  //if there are any newline characters selected
+                  var nlChars=selChars.filter('nl');
+                  if(nlChars.length>0){
+                    //*** multi-line move
+                  }else{
+                    //no selected newline characters... move the selected elements to the right of the cursor element
+                    cr.after(selChars);
+                  }
                   //drop done
                   didDrop=true;
                 }
@@ -474,7 +482,16 @@ var cleanEditor={
                   var adjElem;
                   //get the adjacent element
                   if(leftOrRight=='left'){adjElem=elem.prev();}
-                  else{adjElem=elem.next();}
+                  else{
+                    //no element can appear AFTER nl
+                    if(elem[0].tagName.toLowerCase()=='nl'){
+                      //check BEFORE the nl instead of AFTER
+                      adjElem=elem.prev();
+                    }else{
+                      //check BEFORE the non-nl element
+                      adjElem=elem.next();
+                    }
+                  }
                   //if there is an adjacent element
                   if(adjElem.length>0){
                     //is the adjacent element the cursor?
@@ -491,8 +508,15 @@ var cleanEditor={
                       //move the cursor BEFORE the element
                       elem.before(cr);
                     }else{
-                      //move the cursor AFTER the element
-                      elem.after(cr);
+                      //move the cursor AFTER the element...
+
+                      //if the element is a new line, the cursor can only be LEFT of it
+                      if(elem[0].tagName.toLowerCase()=='nl'){
+                        elem.before(cr);
+                      }else{
+                        //go ahead and move the cursor after the NON <nl> element
+                        elem.after(cr);
+                      }
                     }
                   }
                 };
@@ -500,18 +524,19 @@ var cleanEditor={
                 var tagName=overElem[0].tagName.toLowerCase();
                 switch(tagName){
                   case 'td': //hovered over the code line but NOT over any letter IN the code line
-                    //if the cursor is not already at the end of this code line
-                    var lastCharInTd=overElem.children(':last');
+                    //if the cursor is not already at the end of this code line (before the <nl>)
+                    var nl=overElem.children('nl:last');
+                    var lastCharInTd=nl.prev();
                     //if there are any chars in the code line
                     if(lastCharInTd.length>0){
                       //if the last code line element is NOT the cursor
                       if(!lastCharInTd[0].hasOwnProperty('tagName')||lastCharInTd[0].tagName.toLowerCase()!='c'){
-                        //put the cursor at the end of the code line
-                        overElem.append(cr);
+                        //put the cursor at the end of the code line, before the new line
+                        nl.before(cr);
                       }
                     }else{
-                      //no chars in the code line... put the cursor at the end of the code line
-                      overElem.append(cr);
+                      //no chars in the code line... put the cursor at the end of the code line, before the new line
+                      nl.before(cr);
                     }
                     break;
                   default: //hovered over a character IN the code line
@@ -645,15 +670,15 @@ var cleanEditor={
                   //remove new-sel class and replace with actual sel class
                   var finishNewSel=function(){
                     //remove previous selection
-                    uibody.find('.sel').not('.new-sel').removeClass('sel');
+                    uibody.find('tr td.code > .sel').not('.new-sel').removeClass('sel');
                     //set new selection (and remove new-sel)
-                    uibody.find('.new-sel').removeClass('new-sel').not('.sel').addClass('sel');
+                    uibody.find('tr td.code > .new-sel').removeClass('new-sel').not('.sel').addClass('sel');
                   };
                   //depending on the direction
                   switch(direction){
                     case 'none': //no direction; only one character selected
                       //deselect all that are NOT selected
-                      uibody.find('.sel').not(startElem).removeClass('sel');
+                      uibody.find('tr td.code > .sel').not(startElem).removeClass('sel');
                       //select the single character
                       startElem.addClass('sel');
                       //should the cursor be to the right or left?
@@ -674,7 +699,7 @@ var cleanEditor={
                         //if more than two rows were selected
                         if(rowSpan>2){
                           //select each full row BETWEEN the first and last row
-                          whileNextFullRow(startTr,'right');
+                          whileNextFullRow(startTr.next('tr:first'),'right');
                         }
                         //select the last row up until the last character element
                         whileNext(endTr.children('td.code:last').children(':first'),'right');
@@ -690,7 +715,7 @@ var cleanEditor={
                         //if more than two rows were selected
                         if(rowSpan>2){
                           //select each full row between the first and last row
-                          whileNextFullRow(startTr,'left');
+                          whileNextFullRow(startTr.prev('tr:first'),'left');
                         }
                         //select the last row up until the last character element
                         whileNext(endTr.children('td.code:last').children(':last'),'left');
@@ -710,17 +735,23 @@ var cleanEditor={
           var setUiCurByChar=function(e,elem){
             //get the cursor
             var cr=getCur();
-            //is the mouse closer to the left or right of the char elem
-            var closerEdge=findCloserEdgeX(e,elem);
-            //if closer to the left edge (or centered)
-            if(closerEdge.indexOf('left')==0||closerEdge.indexOf('center')==0){
-              //put the cursor to the LEFT of the character element
-              elem.before(cr);
-            }else{
-              //closer to the right edge...
+            //if the element is NOT a new line
+            if(elem[0].tagName.toLowerCase()!='nl'){
+              //is the mouse closer to the left or right of the char elem
+              var closerEdge=findCloserEdgeX(e,elem);
+              //if closer to the left edge (or centered)
+              if(closerEdge.indexOf('left')==0||closerEdge.indexOf('center')==0){
+                //put the cursor to the LEFT of the character element
+                elem.before(cr);
+              }else{
+                //closer to the right edge...
 
-              //put the cursor to the RIGHT of the character element
-              elem.after(cr);
+                //put the cursor to the RIGHT of the character element
+                elem.after(cr);
+              }
+            }else{
+              //elem is a <nl> character... cursor can only be left of the new line
+              elem.before(cr);
             }
           };
           //set the ui cursor at the end of a td.code line
@@ -728,7 +759,7 @@ var cleanEditor={
             //get the cursor
             var cr=getCur();
             //put the cursor at the end of the given line
-            lineTd.append(cr);
+            lineTd.children('nl:last').before(cr);
           };
           //set the ui cursor at the start of a td.code line
           var setUiCurAtLineStart=function(lineTd){
@@ -743,7 +774,7 @@ var cleanEditor={
             var cr=getCur();
             //get the last code line
             var lastLineTd=uibody.find('tr td.code:last');
-            lastLineTd.append(cr);
+            lastLineTd.children('nl:last').before(cr);
           };
           //set the cursor inside the textarea, aligned with the UI cursor
           var setTextareaCaret=function(){
@@ -775,38 +806,57 @@ var cleanEditor={
           };
           //handle a mouse up event over editor elements
           var editorMouseRelease=function(e,elem,setUiCursorSingleClick){
-
-
-            console.log(elem[0].tagName + ' release');
-            //update selected letters (if any selected)
-            setUiSelected(e);
-            //stop drag because the mouse was released
-            dragStop(e);
             //==IF MOUSE UP ON CURSOR==
             if(elem[0].tagName.toLowerCase()=='c'){
+              console.log(elem[0].tagName + ' MOUSE UP ON CURSOR==');
+              //update selected letters class (if any selected)
+              setUiSelected(e);
               //prevent bubble
-              stopBubbleUp(e); //***
+              stopBubbleUp(e);
+              //stop drag because the mouse was released
+              dragStop(e); dragSelStop(e);
             //==NO SELECTION, SINGLE CLICK TO SET THE CURSOR==
             }else if(uibody.find('tr td.code > .sel:first').length<1){
+              console.log(elem[0].tagName + ' NO SELECTION, SINGLE CLICK TO SET THE CURSOR==');
+              //update selected letters class (if any selected)
+              var selObj=setUiSelected(e);
               //prevent bubble and set focus
               stopBubbleUp(e); focusOn(e,elem);
-              //set the cursor
-              setUiCursorSingleClick();
-              //reset the textarea's cursor position value
-              cursorPos=undefined;
-              //update the textarea's cursor position
-              setTextareaCaret();
+              //stop drag because the mouse was released
+              dragStop(e); dragSelStop(e);
+              //if nothing selected
+              if(selObj==undefined){
+                //set the cursor
+                setUiCursorSingleClick();
+                //reset the textarea's cursor position value
+                cursorPos=undefined;
+                //update the textarea's cursor position
+                setTextareaCaret();
+              }else{
+                //there is selected text (from double click)...
+
+                //align textarea with the UI selection
+                selRange=undefined; setTextareaSelected();
+              }
             //==DROP THE DRAGGED TEXT SELECTION==
             }else if(wrap.hasClass('drag-sel')){
+              console.log(elem[0].tagName + ' DROP THE DRAGGED TEXT SELECTION==');
               //prevent bubble and set focus
               stopBubbleUp(e); focusOn(e,elem);
+              //stop drag because the mouse was released
+              dragStop(e); dragSelStop(e);
               //drop the selection at the new position
-              cursorPos=undefined; dropAtCursor(e); dragSelStop(e);
+              cursorPos=undefined; dropAtCursor(e);
             //one or more letters are selected...
             }else{
               //==FINISH DRAGGING TO SELECT TEXT==
+              console.log(elem[0].tagName + ' FINISH DRAGGING TO SELECT TEXT==');
+              //update selected letters class (if any selected)
+              setUiSelected(e);
               //prevent bubble and set focus
               stopBubbleUp(e); focusOn(e,elem);
+              //stop drag because the mouse was released
+              dragStop(e); dragSelStop(e);
               //align textarea with the UI selection
               selRange=undefined; setTextareaSelected();
             }
@@ -823,7 +873,7 @@ var cleanEditor={
             dragStop(e);
             dragSelStop(e);
           });
-          wrap.mousemove(function(e){
+          jQuery('body:first').mousemove(function(e){
             if(wrap.hasClass('drag')){
               //if dragging selected text
               if(wrap.hasClass('drag-sel')){
@@ -914,7 +964,7 @@ var cleanEditor={
           //return UI row html from raw rowTxtl
           var appendUiRow=function(rowNum,rowTxt){
             //add the basic row html to the ui table body
-            uibody.append('<tr><td class="num">'+rowNum+'</td><td class="code">'+toUiStr(rowTxt)+'</td></tr>');
+            uibody.append('<tr><td class="num">'+rowNum+'</td><td class="code">'+toUiStr(rowTxt)+'<nl>&nbsp;</nl></td></tr>');
             //get this latest row
             var newRow=uibody.children('tr:last');
             var numTd=newRow.children('td:first'); var lineTd=newRow.children('td:last');
