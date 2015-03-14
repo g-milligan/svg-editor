@@ -12,7 +12,9 @@ var cleanEditor={
         ta=ta.eq(0);
         //if the editor is NOT already initialized
         if(!ta.hasClass('clean-editor-src')){
-          obj={};
+          //obj is returned to expose its functions and properties.
+          //However, privObj holds functions and properties that are private to this load function
+          obj={}; var privObj={};
         //==BASIC DOM AND STYLE SETUP==
           //set the class
           ta.addClass('clean-editor-src');
@@ -46,6 +48,26 @@ var cleanEditor={
             }else{
               wrap.removeClass('debug'); debug=false;
             }return debug;
+          };
+          //function to return true or false based on element tag name
+          var isTag=function(elem,tag){
+            var itIs=false;
+            if(elem!=undefined){
+              if(elem.length>0){
+                if(elem[0].hasOwnProperty('tagName')){
+                  if(tag!=undefined){
+                    tag=tag.toLowerCase();
+                    if(elem[0].tagName.toLowerCase()==tag){
+                      itIs=true;
+                    }
+                  }else{
+                    //no tag given, but elem has a tagName property
+                    itIs=true;
+                  }
+                }
+              }
+            }
+            return itIs;
           };
           //generic replace all function
           var strRAll=function(theStr,charToReplace,replaceWith){
@@ -152,7 +174,7 @@ var cleanEditor={
                     //not the target...
 
                     //if this is NOT the cursor
-                    if(jQuery(this)[0].tagName.toLowerCase()!='c'){
+                    if(!isTag(jQuery(this),'c')){
                       //count this character that appears BEFORE the target in this line
                       pos++;
                     }
@@ -184,7 +206,7 @@ var cleanEditor={
             if(!startChar.hasClass('target')){
               //==COUNT CHARACTERS AFTER THE START CHARACTER, IN THE FIRST CODE LINE==
               //if NOT starting with the cursor
-              if(startChar[0].tagName.toLowerCase()!='c'){
+              if(!isTag(startChar,'c')){
                 //count the first character within the range
                 range++;
               }
@@ -198,7 +220,7 @@ var cleanEditor={
                   //NOT the end of the first code line...
 
                   //if NOT the cursor
-                  if(startChar[0].tagName.toLowerCase()!='c'){
+                  if(!isTag(startChar,'c')){
                     range++;
                   }
                   //if this is the lastChar
@@ -247,7 +269,7 @@ var cleanEditor={
                       return false;
                     }else{
                       //not the last character... if NOT the cursor
-                      if(jQuery(this)[0].tagName.toLowerCase()!='c'){
+                      if(!isTag(jQuery(this),'c')){
                         //add one to the range count
                         range++;
                       }
@@ -259,7 +281,7 @@ var cleanEditor={
               //startChar is the endChar...
 
               //if NOT the cursor
-              if(startChar[0].tagName.toLowerCase()!='c'){
+              if(!isTag(startChar,'c')){
                 range++;
               }
             }
@@ -384,6 +406,8 @@ var cleanEditor={
               ta[0].selectionStart=ta[0].selectionEnd=-1;
             }
           };
+          //function to distribute characters to multiple rows depending on newline placement
+
           //drop the drag-selected text onto the current cursor position
           var follow_drag_timeout;
           var dropAtCursor=function(e){
@@ -414,7 +438,7 @@ var cleanEditor={
                   var txtAfterIns=newTxt.substring(newPos);
                   newTxt=undefined; //drop in memory
                   //insert the selected text at the new position and update the textarea value
-                  ta.val(txtBeforeIns+selTxt+txtAfterIns); txtAfterIns=undefined; txtBeforeIns=undefined; selTxt=undefined;
+                  ta.val(txtBeforeIns+selTxt+txtAfterIns); txtAfterIns=undefined; txtBeforeIns=undefined;
                   //==UPDATE THE CURSOR POSITION AND SELECTION RANGE INDEXES==
                   cursorPosition=newPos; selRange.start=newPos; selRange.end=newPos+selLen;
                   //==SELECT THE MOVED TEXT IN THE TEXT AREA==
@@ -426,10 +450,12 @@ var cleanEditor={
                   //if there are any newline characters selected
                   var nlChars=selChars.filter('nl');
                   if(nlChars.length>0){
-                    //*** multi-line move
+                    //***
                   }else{
-                    //no selected newline characters... move the selected elements to the right of the cursor element
-                    cr.after(selChars);
+                    //selected text is all on the SAME code line...
+                    selTxt=undefined;
+                    //move the selected elements before the cursor element
+                    cr.before(selChars);
                   }
                   //drop done
                   didDrop=true;
@@ -486,7 +512,7 @@ var cleanEditor={
                   if(leftOrRight=='left'){adjElem=elem.prev();}
                   else{
                     //no element can appear AFTER nl
-                    if(elem[0].tagName.toLowerCase()=='nl'){
+                    if(isTag(elem,'nl')){
                       //check BEFORE the nl instead of AFTER
                       adjElem=elem.prev();
                     }else{
@@ -497,7 +523,7 @@ var cleanEditor={
                   //if there is an adjacent element
                   if(adjElem.length>0){
                     //is the adjacent element the cursor?
-                    if(!adjElem[0].hasOwnProperty('tagName')||adjElem[0].tagName.toLowerCase()!='c'){
+                    if(!isTag(adjElem,'c')){
                       isThere=false;}
                   }else{isThere=false;}
                   return isThere;
@@ -513,7 +539,7 @@ var cleanEditor={
                       //move the cursor AFTER the element...
 
                       //if the element is a new line, the cursor can only be LEFT of it
-                      if(elem[0].tagName.toLowerCase()=='nl'){
+                      if(isTag(elem,'nl')){
                         elem.before(cr);
                       }else{
                         //go ahead and move the cursor after the NON <nl> element
@@ -532,7 +558,7 @@ var cleanEditor={
                     //if there are any chars in the code line
                     if(lastCharInTd.length>0){
                       //if the last code line element is NOT the cursor
-                      if(!lastCharInTd[0].hasOwnProperty('tagName')||lastCharInTd[0].tagName.toLowerCase()!='c'){
+                      if(!isTag(lastCharInTd,'c')){
                         //put the cursor at the end of the code line, before the new line
                         nl.before(cr);
                       }
@@ -568,181 +594,183 @@ var cleanEditor={
           //adds a sel class to the selected characters in the UI
           var setUiSelected=function(e){
             var retObj;
-            var selObj=document.getSelection();
+            var selObj=window.getSelection();
             if(selObj!=undefined){
               if(selObj.hasOwnProperty('type')){
                 if(selObj.type.toLowerCase()=='range'){
-                  retObj={};
-                  //remove the cursor while selecting
-                  if(cursorElem!=undefined&&cursorElem.length>0){
-                    cursorElem.remove();
-                  }
-                  //get the starting and end of the selection
+                  //get the start of the selection
                   var startElem=jQuery(selObj.anchorNode.parentNode);
-                  var endElem=jQuery(selObj.focusNode.parentNode);
-                  endElem.addClass('end-sel'); retObj['endElem']=endElem;
-                  //==DISCOVER DRAG DIRECTION AND HOW MANY ROWS SELECTION SPANS==
-                  //decide what direction the selectino was dragged
-                  var direction=''; var rowSpan=1;
-                  //get parent tr elements
-                  var startTr=startElem.parents('tr:first');
-                  var endTr=endElem.parents('tr:first');
-                  endTr.addClass('end-sel');
-                  //if selection starts and ends in the same row
-                  var startRowIndex=startTr.index();
-                  var endRowIndex=endTr.index();
-                  if(startRowIndex==endRowIndex){
-                    //if the start and end letter are the same
-                    var startCharIndex=startElem.index();
-                    var endCharIndex=endElem.index();
-                    if(startCharIndex==endCharIndex){
-                      direction='none';
-                    }else if(startCharIndex<endCharIndex){
-                      //start char is before end char
+                  //if selected start element is a code letter
+                  if(startElem.parent().hasClass('code')){
+                    retObj={};
+                    //remove the cursor while selecting
+                    if(cursorElem!=undefined&&cursorElem.length>0){
+                      cursorElem.remove();
+                    }
+                    //get the end of the selection
+                    var endElem=jQuery(selObj.focusNode.parentNode);
+                    endElem.addClass('end-sel'); retObj['endElem']=endElem;
+                    //==DISCOVER DRAG DIRECTION AND HOW MANY ROWS SELECTION SPANS==
+                    //decide what direction the selectino was dragged
+                    var direction=''; var rowSpan=1;
+                    //get parent tr elements
+                    var startTr=startElem.parents('tr:first');
+                    var endTr=endElem.parents('tr:first');
+                    endTr.addClass('end-sel');
+                    //if selection starts and ends in the same row
+                    var startRowIndex=startTr.index();
+                    var endRowIndex=endTr.index();
+                    if(startRowIndex==endRowIndex){
+                      //if the start and end letter are the same
+                      var startCharIndex=startElem.index();
+                      var endCharIndex=endElem.index();
+                      if(startCharIndex==endCharIndex){
+                        direction='none';
+                      }else if(startCharIndex<endCharIndex){
+                        //start char is before end char
+                        direction='right';
+                      }else{
+                        //start char is after end char
+                        direction='left';
+                      }
+                    }else if(startRowIndex<endRowIndex){
+                      //start row is before the end row
                       direction='right';
+                      rowSpan=endRowIndex-startRowIndex+1;
                     }else{
-                      //start char is after end char
+                      //start row is after the end row
                       direction='left';
+                      rowSpan=startRowIndex-endRowIndex+1;
                     }
-                  }else if(startRowIndex<endRowIndex){
-                    //start row is before the end row
-                    direction='right';
-                    rowSpan=endRowIndex-startRowIndex+1;
-                  }else{
-                    //start row is after the end row
-                    direction='left';
-                    rowSpan=startRowIndex-endRowIndex+1;
-                  }
-                  //==ADD THE SEL CLASS TO SELECTED CHARACTER ELEMENTS==
-                  //select the next adacent character element
-                  var nextNew=function(charElem,dir){
-                    var el;
-                    //get the next adjacent element
-                    if(dir=='right'){el=charElem.next();}
-                    else{el=charElem.prev();}
-                    //if there is another adjacent element
-                    if(el.length>0){
-                      //mark this as a new selected element
-                      el.addClass('new-sel');
-                      //if this should be the last selected
-                      if(el.hasClass('end-sel')){
-                        el=undefined;
+                    //==ADD THE SEL CLASS TO SELECTED CHARACTER ELEMENTS==
+                    //select the next adacent character element
+                    var nextNew=function(charElem,dir){
+                      var el;
+                      //get the next adjacent element
+                      if(dir=='right'){el=charElem.next();}
+                      else{el=charElem.prev();}
+                      //if there is another adjacent element
+                      if(el.length>0){
+                        //mark this as a new selected element
+                        el.addClass('new-sel');
+                        //if this should be the last selected
+                        if(el.hasClass('end-sel')){
+                          el=undefined;
+                        }
+                      }else{el=undefined;} return el;
+                    };
+                    //select each next adacent character in a single row
+                    var whileNext=function(charElem,dir){
+                      //the first char element should have the class
+                      charElem.addClass('new-sel');
+                      //while there is a next element in this row that should get the new-sel class
+                      while(charElem!=undefined){
+                        //get the next new-sel character element, if there is one
+                        charElem=nextNew(charElem,dir);
                       }
-                    }else{el=undefined;} return el;
-                  };
-                  //select each next adacent character in a single row
-                  var whileNext=function(charElem,dir){
-                    //the first char element should have the class
-                    charElem.addClass('new-sel');
-                    //while there is a next element in this row that should get the new-sel class
-                    while(charElem!=undefined){
-                      //get the next new-sel character element, if there is one
-                      charElem=nextNew(charElem,dir);
-                    }
-                  };
-                  //select ALL characters in the next fully selected row
-                  var nextNewFullRow=function(rEl,dir){
-                    var el;
-                    //get the next adjacent element
-                    if(dir=='right'){el=rEl.next();}
-                    else{el=rEl.prev();}
-                    //if there is another adjacent element
-                    if(el.length>0){
-                      //if this should be the last selected
-                      if(el.hasClass('end-sel')){
-                        el=undefined;
-                      }else{
-                        //add nl-sel class
-                        el.addClass('nl-sel');
-                        //mark characters in this row as new-sel
-                        var cTd=el.children('td.code:last');
-                        cTd.children().addClass('new-sel');
+                    };
+                    //select ALL characters in the next fully selected row
+                    var nextNewFullRow=function(rEl,dir){
+                      var el;
+                      //get the next adjacent element
+                      if(dir=='right'){el=rEl.next();}
+                      else{el=rEl.prev();}
+                      //if there is another adjacent element
+                      if(el.length>0){
+                        //if this should be the last selected
+                        if(el.hasClass('end-sel')){
+                          el=undefined;
+                        }else{
+                          //mark characters in this row as new-sel
+                          var cTd=el.children('td.code:last');
+                          cTd.children().addClass('new-sel');
+                        }
+                      }else{el=undefined;} return el;
+                    };
+                    //select ALL characters in EACH fully selected row (between first and last row)
+                    var whileNextFullRow=function(rEl,dir){
+                      //mark characters in this row as new-sel
+                      var cTd=rEl.children('td.code:last');
+                      cTd.children().addClass('new-sel');
+                      //while there is a next element in this row that should get the new-sel class
+                      while(rEl!=undefined){
+                        //get the next FULLY SELECTED tr row, if there is one
+                        rEl=nextNewFullRow(rEl,dir);
                       }
-                    }else{el=undefined;} return el;
-                  };
-                  //select ALL characters in EACH fully selected row (between first and last row)
-                  var whileNextFullRow=function(rEl,dir){
-                    //add nl-sel class
-                    rEl.addClass('nl-sel');
-                    //mark characters in this row as new-sel
-                    var cTd=rEl.children('td.code:last');
-                    cTd.children().addClass('new-sel');
-                    //while there is a next element in this row that should get the new-sel class
-                    while(rEl!=undefined){
-                      //get the next FULLY SELECTED tr row, if there is one
-                      rEl=nextNewFullRow(rEl,dir);
-                    }
-                  };
-                  //remove new-sel class and replace with actual sel class
-                  var finishNewSel=function(){
-                    //remove previous selection
-                    uibody.find('tr td.code > .sel').not('.new-sel').removeClass('sel');
-                    //set new selection (and remove new-sel)
-                    var selElems=uibody.find('tr td.code > .new-sel').removeClass('new-sel').not('.sel').addClass('sel');
-                  };
-                  //clear nl-sel classes
-                  uibody.children('.nl-sel').removeClass('nl-sel');
-                  //depending on the direction
-                  switch(direction){
-                    case 'none': //no direction; only one character selected
-                      //deselect all that are NOT selected
-                      uibody.find('tr td.code > .sel').not(startElem).removeClass('sel');
-                      //select the single character
-                      startElem.addClass('sel');
-                      //if this is a newline character
-                      if(startElem[0].tagName.toLowerCase()=='nl'){
-                        //add nl-sel class
-                        startTr.addClass('nl-sel');
-                      }
-                      //should the cursor be to the right or left?
-                      var closerEdge=findCloserEdgeX(e,startElem);
-                      //if the cursor is closer to the left edge of the selection
-                      if(closerEdge.indexOf('left')==0||closerEdge.indexOf('center')==0){
-                        //cursor should appear to the left
-                        retObj['cur_pos']='left';
-                      }else{
-                        //cursor should appear to the right
+                    };
+                    //remove new-sel class and replace with actual sel class
+                    var finishNewSel=function(){
+                      //remove previous selection
+                      uibody.find('tr td.code > .sel').not('.new-sel').removeClass('sel');
+                      //set new selection (and remove new-sel)
+                      var selElems=uibody.find('tr td.code > .new-sel').removeClass('new-sel').not('.sel').addClass('sel');
+                      //select tr rows that contain selected newline characters
+                      uibody.find('tr td.code > nl.sel').each(function(){
+                        jQuery(this).parent().parent().addClass('nl-sel');
+                      });
+                    };
+                    //clear nl-sel classes
+                    uibody.children('.nl-sel').removeClass('nl-sel');
+                    //depending on the direction
+                    switch(direction){
+                      case 'none': //no direction; only one character selected
+                        //deselect all that are NOT selected
+                        uibody.find('tr td.code > .sel').not(startElem).removeClass('sel');
+                        //select the single character
+                        startElem.addClass('sel');
+                        //if this is a newline character
+                        if(isTag(startElem,'nl')){
+                          //add nl-sel class
+                          startTr.addClass('nl-sel');
+                        }
+                        //should the cursor be to the right or left?
+                        var closerEdge=findCloserEdgeX(e,startElem);
+                        //if the cursor is closer to the left edge of the selection
+                        if(closerEdge.indexOf('left')==0||closerEdge.indexOf('center')==0){
+                          //cursor should appear to the left
+                          retObj['cur_pos']='left';
+                        }else{
+                          //cursor should appear to the right
+                          retObj['cur_pos']='right';
+                        }
+                        break;
+                      case 'right': //cursor drag to the right
+                        whileNext(startElem,'right');
+                        //if MORE than one row was selected
+                        if(rowSpan>1){
+                          //if more than two rows were selected
+                          if(rowSpan>2){
+                            //select each full row BETWEEN the first and last row
+                            whileNextFullRow(startTr.next('tr:first'),'right');
+                          }
+                          //select the last row up until the last character element
+                          whileNext(endTr.children('td.code:last').children(':first'),'right');
+                        }
                         retObj['cur_pos']='right';
-                      }
-                      break;
-                    case 'right': //cursor drag to the right
-                      whileNext(startElem,'right');
-                      //if MORE than one row was selected
-                      if(rowSpan>1){
-                        //add nl-sel class
-                        startTr.addClass('nl-sel');
-                        //if more than two rows were selected
-                        if(rowSpan>2){
-                          //select each full row BETWEEN the first and last row
-                          whileNextFullRow(startTr.next('tr:first'),'right');
+                        //replace new-sel classes with sel class
+                        finishNewSel();
+                        break;
+                      case 'left': //cursor drag to the left
+                        whileNext(startElem,'left');
+                        //if MORE than one row was selected
+                        if(rowSpan>1){
+                          //if more than two rows were selected
+                          if(rowSpan>2){
+                            //select each full row between the first and last row
+                            whileNextFullRow(startTr.prev('tr:first'),'left');
+                          }
+                          //select the last row up until the last character element
+                          whileNext(endTr.children('td.code:last').children(':last'),'left');
                         }
-                        //select the last row up until the last character element
-                        whileNext(endTr.children('td.code:last').children(':first'),'right');
-                      }
-                      retObj['cur_pos']='right';
-                      //replace new-sel classes with sel class
-                      finishNewSel();
-                      break;
-                    case 'left': //cursor drag to the left
-                      whileNext(startElem,'left');
-                      //if MORE than one row was selected
-                      if(rowSpan>1){
-                        //if more than two rows were selected
-                        if(rowSpan>2){
-                          //select each full row between the first and last row
-                          whileNextFullRow(startTr.prev('tr:first'),'left');
-                        }
-                        //add nl-sel class
-                        endTr.addClass('nl-sel');
-                        //select the last row up until the last character element
-                        whileNext(endTr.children('td.code:last').children(':last'),'left');
-                      }
-                      retObj['cur_pos']='left';
-                      //replace new-sel classes with sel class
-                      finishNewSel();
-                      break;
+                        retObj['cur_pos']='left';
+                        //replace new-sel classes with sel class
+                        finishNewSel();
+                        break;
+                    }
+                    endElem.removeClass('end-sel'); endTr.removeClass('end-sel');
+                    //the last line shouldn't show having a newline character
+                    uibody.children('tr:last').removeClass('nl-sel').find('td.code > nl.sel:last').removeClass('sel');
                   }
-                  endElem.removeClass('end-sel'); endTr.removeClass('end-sel');
                 }
               }
             }
@@ -753,7 +781,7 @@ var cleanEditor={
             //get the cursor
             var cr=getCur();
             //if the element is NOT a new line
-            if(elem[0].tagName.toLowerCase()!='nl'){
+            if(!isTag(elem,'nl')){
               //is the mouse closer to the left or right of the char elem
               var closerEdge=findCloserEdgeX(e,elem);
               //if closer to the left edge (or centered)
@@ -824,8 +852,7 @@ var cleanEditor={
           //handle a mouse up event over editor elements
           var editorMouseRelease=function(e,elem,setUiCursorSingleClick){
             //==IF MOUSE UP ON CURSOR==
-            if(elem[0].tagName.toLowerCase()=='c'){
-              console.log(elem[0].tagName + ' MOUSE UP ON CURSOR==');
+            if(isTag(elem,'c')){
               //update selected letters class (if any selected)
               setUiSelected(e);
               //prevent bubble
@@ -834,7 +861,6 @@ var cleanEditor={
               dragStop(e); dragSelStop(e);
             //==NO SELECTION, SINGLE CLICK TO SET THE CURSOR==
             }else if(uibody.find('tr td.code > .sel:first').length<1){
-              console.log(elem[0].tagName + ' NO SELECTION, SINGLE CLICK TO SET THE CURSOR==');
               //update selected letters class (if any selected)
               var selObj=setUiSelected(e);
               //prevent bubble and set focus
@@ -857,17 +883,33 @@ var cleanEditor={
               }
             //==DROP THE DRAGGED TEXT SELECTION==
             }else if(wrap.hasClass('drag-sel')){
-              console.log(elem[0].tagName + ' DROP THE DRAGGED TEXT SELECTION==');
-              //prevent bubble and set focus
-              stopBubbleUp(e); focusOn(e,elem);
-              //stop drag because the mouse was released
-              dragStop(e); dragSelStop(e);
-              //drop the selection at the new position
-              cursorPos=undefined; dropAtCursor(e);
+              //if NOT trying to drop on selected text
+              if(!elem.hasClass('sel')){
+                //prevent bubble and set focus
+                stopBubbleUp(e); focusOn(e,elem);
+                //stop drag because the mouse was released
+                dragStop(e); dragSelStop(e);
+                //drop the selection at the new position
+                cursorPos=undefined; dropAtCursor(e);
+              }else{
+                //dropping OR clicking on selected text...
+
+                //deselect text
+                deselect();
+                //prevent bubble and set focus
+                stopBubbleUp(e); focusOn(e,elem);
+                //stop drag because the mouse was released
+                dragStop(e); dragSelStop(e);
+                //set the cursor
+                setUiCursorSingleClick();
+                //reset the textarea's cursor position value
+                cursorPos=undefined;
+                //update the textarea's cursor position
+                setTextareaCaret();
+              }
             //one or more letters are selected...
             }else{
               //==FINISH DRAGGING TO SELECT TEXT==
-              console.log(elem[0].tagName + ' FINISH DRAGGING TO SELECT TEXT==');
               //update selected letters class (if any selected)
               setUiSelected(e);
               //prevent bubble and set focus
@@ -878,10 +920,93 @@ var cleanEditor={
               selRange=undefined; setTextareaSelected();
             }
           };
+          //function to add the eents to characters
+          var evsChars=function(lineChars){
+            //filter out line characters that ALREADY have these events
+            lineChars=lineChars.not('.evs'); lineChars.addClass('evs');
+            //attach line character events
+            lineChars.mousedown(function(e){
+              stopBubbleUp(e);
+              //if this letter is NOT already selected
+              if(!jQuery(this).hasClass('sel')){
+                //select
+                deselect();
+              }else{
+                //maybe drag moving selected letters...
+                dragSelStart(e);
+              }
+              dragStart(e);
+            });
+            lineChars.hover(function(e){
+              stopBubbleUp(e);
+              jQuery(this).parent().removeClass('over');
+              jQuery(this).addClass('over');
+              //if dragging selected text OVER selected text
+              var isDragSel=false;
+              if(jQuery(this).hasClass('sel')){
+                if(wrap.hasClass('drag-sel')){
+                  isDragSel=true;
+                }
+              }
+              if(isDragSel){
+                //dragging selected text OVER selected text
+                wrap.addClass('drop-on-sel');
+              }else{
+                //NOT dragging selected text over selected text
+                wrap.removeClass('drop-on-sel');
+              }
+            },function(e){
+              stopBubbleUp(e);
+              jQuery(this).parent().removeClass('over');
+              jQuery(this).removeClass('over');
+            });
+            lineChars.mouseup(function(e){
+              var lineChar=jQuery(this);
+              editorMouseRelease(e,lineChar,function(){
+                //set the cursor adjacent to this letter
+                setUiCurByChar(e,lineChar);
+              });
+            });
+          };
+          privObj['evsChars']=evsChars;
+          //function to add the events to any element under the tr, that doesn't already have the events
+          var evsTr=function(tr){
+            //get elements that don't hav events
+            var numTd=tr.children('td:first').not('.evs'); numTd.addClass('evs');
+            var lineTd=tr.children('td:last').not('.evs'); lineTd.addClass('evs');
+            //add the new row's events
+            numTd.mouseup(function(e){
+              var td=jQuery(this);
+              editorMouseRelease(e,td,function(){
+                //set the cursor at the end of the code line
+                setUiCurAtLineStart(td.parent().children('td.code:last')); //*** select line instead?
+              });
+            });
+            numTd.on('mousemove touchmove',function(e){
+              stopBubbleUp(e); preventDefault(e);
+            });
+            lineTd.mouseup(function(e){
+              var td=jQuery(this);
+              editorMouseRelease(e,td,function(){
+                //set the cursor at the end of the code line
+                setUiCurAtLineEnd(td);
+              });
+            });
+            lineTd.mousedown(function(e){
+              dragStart(e);
+            });
+            lineTd.hover(function(e){
+              jQuery(this).addClass('over');
+            },function(e){
+              jQuery(this).removeClass('over');
+            });
+            //character events
+            evsChars(tr.children('td:last').children());
+          };
+          privObj['evsTr']=evsTr;
         //==ATTACH EVENTS==
           //mouse up event
           jQuery('body:first').mouseup(function(e){
-            console.log(jQuery(this)[0].tagName + ' release');
             dragStop(e);
             dragSelStop(e);
             deselect();
@@ -903,6 +1028,7 @@ var cleanEditor={
           });
           wrap.mousedown(function(e){
             dragStart(e);
+            deselect();
           });
           wrap.mouseup(function(e){
             editorMouseRelease(e,wrap,function(){
@@ -954,110 +1080,63 @@ var cleanEditor={
         //==FUNCTIONS TO DISPLAY UI TEXT==
           //convert a string text to something that can be dislayed in the ui
           var toUiStr=function(str){
-            //for each character
-            var ret='';
-            for(var c=0;c<str.length;c++){
-              var char=str[c];
-              switch(char){
-                case ' ':
-                  ret+='<sp>&nbsp;</sp>';
-                  break;
-                case '\t':
-                  ret+='<t>&nbsp;</t>';
-                  break;
-                case '<':
-                  ret+='<l>&lt;</l>';
-                  break;
-                case '>':
-                  ret+='<l>&gt;</l>';
-                  break;
-                default:
-                  ret+='<l>'+char+'</l>';
-                  break;
+            if(str==undefined){str='';}
+            if(str.length>0){
+              //for each character
+              var ret='';
+              for(var c=0;c<str.length;c++){
+                var char=str[c];
+                switch(char){
+                  case ' ':
+                    ret+='<sp>&nbsp;</sp>';
+                    break;
+                  case '\t':
+                    ret+='<t>&nbsp;</t>';
+                    break;
+                  case '<':
+                    ret+='<l>&lt;</l>';
+                    break;
+                  case '>':
+                    ret+='<l>&gt;</l>';
+                    break;
+                  default:
+                    ret+='<l>'+char+'</l>';
+                    break;
+                }
               }
             }
             return ret;
           };
           //return UI row html from raw rowTxtl
-          var appendUiRow=function(rowNum,rowTxt){
-            //add the basic row html to the ui table body
-            uibody.append('<tr><td class="num">'+rowNum+'</td><td class="code">'+toUiStr(rowTxt)+'<nl>&nbsp;</nl></td></tr>');
-            //get this latest row
-            var newRow=uibody.children('tr:last');
-            var numTd=newRow.children('td:first'); var lineTd=newRow.children('td:last');
-            var lineChars=lineTd.children();
-            //add the new row's events
-            numTd.mouseup(function(e){
-              var td=jQuery(this);
-              editorMouseRelease(e,td,function(){
-                //set the cursor at the end of the code line
-                setUiCurAtLineStart(td.parent().children('td.code:last')); //*** select line instead?
-              });
-            });
-            numTd.on('mousemove touchmove',function(e){
-              stopBubbleUp(e); preventDefault(e);
-            });
-            lineTd.mouseup(function(e){
-              var td=jQuery(this);
-              editorMouseRelease(e,td,function(){
-                //set the cursor at the end of the code line
-                setUiCurAtLineEnd(td);
-              });
-            });
-            /*lineTd.mousedown(function(e){
-              deselect();
-              dragStart(e);
-            });*/
-            lineTd.hover(function(e){
-              jQuery(this).addClass('over');
-            },function(e){
-              jQuery(this).removeClass('over');
-            });
-            lineChars.mousedown(function(e){
-              stopBubbleUp(e);
-              //if this letter is NOT already selected
-              if(!jQuery(this).hasClass('sel')){
-                //select
-                deselect();
-              }else{
-                //maybe drag moving selected letters...
-                dragSelStart(e);
-              }
-              dragStart(e);
-            });
-            lineChars.hover(function(e){
-              stopBubbleUp(e);
-              jQuery(this).parent().removeClass('over');
-              jQuery(this).addClass('over');
-              //if dragging selected text OVER selected text
-              var isDragSel=false;
-              if(jQuery(this).hasClass('sel')){
-                if(wrap.hasClass('drag-sel')){
-                  isDragSel=true;
+          var appendUiRow=function(rowNum,rowTxt,afterTr){
+            var newRow;
+            //no specified existing tr to append after
+            var rowHtml='<tr><td class="num">'+rowNum+'</td><td class="code">'+toUiStr(rowTxt)+'<nl>&nbsp;</nl></td></tr>';
+            if(afterTr==undefined){
+              //add the basic row html to the ui table body
+              uibody.append(rowHtml);
+              //get this latest row
+              newRow=uibody.children('tr:last');
+              //add the events to this tr row
+              evsTr(newRow);
+            }else{
+              //append new tr row after the given afterTr...
+
+              if(afterTr.length>0){
+                if(isTag(afterTr,'tr')){
+                  //add the row after the given <tr>
+                  afterTr.after(rowHtml);
+                  newRow=afterTr.next('tr:first');
+                  //add the events to this tr row
+                  evsTr(newRow);
                 }
               }
-              if(isDragSel){
-                //dragging selected text OVER selected text
-                wrap.addClass('drop-on-sel');
-              }else{
-                //NOT dragging selected text over selected text
-                wrap.removeClass('drop-on-sel');
-              }
-            },function(e){
-              stopBubbleUp(e);
-              jQuery(this).parent().removeClass('over');
-              jQuery(this).removeClass('over');
-            });
-            lineChars.mouseup(function(e){
-              var lineChar=jQuery(this);
-              editorMouseRelease(e,lineChar,function(){
-                //set the cursor adjacent to this letter
-                setUiCurByChar(e,lineChar);
-              });
-            });
+            }
             //==TEXT HIGHLIGHTER== ?
             //***
+            return newRow;
           };
+          privObj['appendUiRow']=appendUiRow;
           //display the textarea contents, in ui table rows
           var textToUi=function(maxRows){
             //set a default max number of rows, if none given
@@ -1067,7 +1146,7 @@ var cleanEditor={
             //clear the contents, if any, of the UI
             uibody.html('');
             //while max rows NOT reached AND endof text NOT reached
-            var rowIndex=0;
+            var rowIndex=0; var currentRow;
             while(rowIndex<maxRows&&txt.length>0){
               var rowTxt='';
               //if there is another new line character in txt
@@ -1082,7 +1161,7 @@ var cleanEditor={
                 rowTxt=txt; txt='';
               }
               //add this row to the ui
-              appendUiRow(rowIndex+1,rowTxt);
+              currentRow=appendUiRow(rowIndex+1,rowTxt,currentRow);
               //next row index
               rowIndex++;
             }
