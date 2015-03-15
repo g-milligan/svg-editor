@@ -332,6 +332,45 @@ var cleanEditor={
             }
             return newTr;
           }
+          //function to update the line numbers starting at a given tr element
+          var updateLineNumbers=function(startTr){
+            var updateCount=0;
+            if(startTr==undefined){
+              uibody.children().children('td.num:first').each(function(n){
+                jQuery(this).text((n+1)+'');
+                updateCount++;
+              });
+            }else{
+              var index;
+              //get starting index
+              if(isNaN(startTr)){
+                //get the index of the tr element
+                index=startTr.index();
+              }else{
+                //get the tr element from the index
+                index=startTr;
+                startTr=uibody.children().eq(index);
+              }
+              if(index!=undefined){
+                //if index is a number
+                if(!isNaN(index)){
+                  //if index is not negative
+                  if(index>-1){
+                    if(isTag(startTr,'tr')){
+                      //for each
+                      while(startTr.length>0){
+                        startTr.children('td.num:first').text((index+1)+'');
+                        startTr=startTr.next();
+                        index++;
+                        updateCount++;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            return updateCount;
+          };
           //get the selection range (start and end pos)
           var selRange;
           var getSelRange=function(){
@@ -354,7 +393,7 @@ var cleanEditor={
             return selRange;
           };
           //function to return the tr elements that contain selected characters
-          var getSelTrs=function(selChars){
+          var getSelTrs=function(selChars,trFunc){
             var selTrs;
             if(selChars==undefined){
               selChars=uibody.find('tr td.code > .sel');
@@ -373,6 +412,10 @@ var cleanEditor={
                   if(startTr.length>0){
                     //has selected characters
                     startTr.addClass('has-sel');
+                    //if there is a function to run for tr items
+                    if(trFunc!=undefined){
+                      trFunc(startTr);
+                    }
                     //if this is the end row
                     if(startTr.hasClass('target')){
                       //stop looking for the next one
@@ -393,6 +436,10 @@ var cleanEditor={
               }else{
                 //start and end tr are the same
                 selTrs=endTr.removeClass('target');
+                //if there is a function to run for tr items
+                if(trFunc!=undefined){
+                  trFunc(selTrs);
+                }
               }
             }
             return selTrs;
@@ -503,7 +550,7 @@ var cleanEditor={
                   var txtAfterIns=newTxt.substring(newPos);
                   newTxt=undefined; //drop in memory
                   //insert the selected text at the new position and update the textarea value
-                  ta.val(txtBeforeIns+selTxt+txtAfterIns); txtAfterIns=undefined; txtBeforeIns=undefined;
+                  ta.val(txtBeforeIns+selTxt+txtAfterIns); txtAfterIns=undefined; txtBeforeIns=undefined; selTxt==undefined;
                   //==UPDATE THE CURSOR POSITION AND SELECTION RANGE INDEXES==
                   cursorPosition=newPos; selRange.start=newPos; selRange.end=newPos+selLen;
                   //==SELECT THE MOVED TEXT IN THE TEXT AREA==
@@ -515,62 +562,129 @@ var cleanEditor={
                   //if there are any newline characters selected
                   var nlChars=selChars.filter('nl');
                   if(nlChars.length>0){
+                    //==MARK TR ELEMENTS FOR REMOVAL OR FOR MERGE WITH NEXT TR==
                     //get the tr elements that contain selected characters
-                    var selTrs=getSelTrs(selChars);
-                    //if the cursor has any letters to its right
-                    /*if(cr.next().not('nl').length>0){
-                      //add a line break at the cursor
-                      breakAtCursor(cr);
-                    }
-                    //remove the nl that is hanging right of the cursor (a different nl will be added soon)
-                    cr.next('nl:first').remove();
-                    //for each tr that contains selected characters
-                    selTrs.each(function(r){
-                      var selTr=jQuery(this);
-                      //if first row
-                      if(r==0){
-                        //for each selected character
-                        var tdCode=selTr.children('td.code:last');
-                        tdCode.children('.sel').each(function(s){
-                          var selChar=jQuery(this);
-                          //if this is the nl char
-                          if(isTag(selChar,'nl')){
-                            //this tr no longer has a selected newline character
-                            selTr.removeClass('nl-sel')
-                            //move newline character right of cursor
-                            cr.after(selChar);
-                            //this tr now has a selected nl char
-                            selChar.parent().parent().addClass('nl-sel');
-                          }else{
-                            //NOT newline character... move to left of cursor
-                            cr.before(selChar);
-                          }
-                        });
-                        //if all characters have been moved out of this td.code
-                        if(tdCode.children().length<1){
-                          //remove the tr
-                          selTr.remove();
-                        }
-                      //if last row
-                      }else if(r+1==selTrs.length){
-                        //for each selected character
-                        var tdCode=selTr.children('td.code:last');
-                        tdCode.children('.sel').each(function(s){
-                          var selChar=jQuery(this);
-                          //***
-                        });
+                    var selTrs=getSelTrs(selChars,function(selTr){
+                      //mark the tr rows, with ALL selected characters, with a "remove" class
+                      var codeTd=selTr.children('td.code:last');
+                      //if ALL of the characters in this tr are selected
+                      if(codeTd.children().not('.sel').length<1){
+                        //mark this tr as needing removal
+                        selTr.addClass('remove');
                       }else{
-                        //NOT first nor last row... row is in the middle of selection
-                        //***
-                      }
-                    });*/
-                  }else{
-                    //selected text is all on the SAME code line...
+                        //not ALL characters in this tr are selected...
 
-                    //move the selected elements before the cursor element
-                    cr.before(selChars);
+                        //if the nl character is selected in this tr
+                        if(codeTd.children('nl:last').hasClass('sel')){
+                          //mark this tr as needing to be merged with the next tr
+                          selTr.removeClass('nl-sel');
+                          selTr.addClass('merge');
+                        }
+                      }
+                    });
+                    //==FIGURE OUT THE EARLIEST AFFECTED ROW'S INDEX==
+                    //this row index will be the first row number to update
+                    var cursorRow=cr.parent().parent();
+                    var cursorRowIndex=cursorRow.index();
+                    var firstSelRowIndex=selTrs.eq(0).index();
+                    var updateRowIndex=cursorRowIndex;
+                    //if the first selected row is before the cursor row
+                    if(firstSelRowIndex<cursorRowIndex){
+                      updateRowIndex=firstSelRowIndex;
+                    }
+                    //==DROP THE SELECTED CHARACTERS INTO PLACE
+                    //move the selected characters before the cursor element
+                    cr.before(selChars); cr.remove();
+                    //==REMOVE EMPTY TR ELEMENTS
+                    //remove the tr rows that are now empty
+                    selTrs.filter('.remove').remove(); selTrs=selTrs.not('.remove');
+                    //==MERGE TR ELEMENTS THAT LOST THEIR NEWLINE CHARACTER
+                    //for each tr that no longer ends with a newline, nl, character (needs merge)
+                    selTrs.filter('.merge').each(function(){
+                      //if there is a next row that needs to merge into this row
+                      var intoTr=jQuery(this); intoTr.removeClass('merge');
+                      var intoCodeTd=intoTr.children('td.code:last');
+                      var fromTr=intoTr.next();
+                      if(fromTr.length>0){
+                        //merge the letters
+                        var fromCodeTd=fromTr.children('td.code:last');
+                        intoCodeTd.children(':last').after(fromCodeTd.children());
+                        //remove fromTr
+                        fromTr.remove();
+                      }else{
+                        //no next row to be merged into this merge row...
+
+                        //just restore a nl character at the end of the intoTr code line
+                        intoCodeTd.append('<nl>&nbsp;</nl>');
+                        privObj.evsChars(intoCodeTd.children('nl:last'));
+                      }
+                    });
+                    //==ADD NEW CODE LINE ROWS AFTER EACH NEWLINE CHARACTER IN THE DRAG-TO ROW==
+                    var rowIndex=0;
+                    //for each character in this row (where the selected characters were moved)
+                    var resolveChars=selChars.eq(0).parent().children();
+                    resolveChars.each(function(){
+                      //add the row index class to this character
+                      var char=jQuery(this);
+                      if(rowIndex>0){
+                        char.addClass('new-row-'+rowIndex);
+                      }
+                      //if this is a newline character
+                      if(isTag(char,'nl')){
+                        //next row for the next character
+                        rowIndex++;
+                      }
+                    });
+                    if(rowIndex>0){rowIndex--;}
+                    //if any new rows are needed
+                    if(rowIndex>0){
+                      //get the current row (to append a new row after)
+                      var addAfterTr=selChars.eq(0).parent().parent();
+                      //for each new row to create
+                      for(var r=1;r<=rowIndex;r++){
+                        var rClass='new-row-'+r;
+                        //create the new tr row after the addAfterTr element
+                        addAfterTr=privObj.appendUiRow(-1,'',addAfterTr);
+                        //insert the characters into the new row
+                        var newCodeTd=addAfterTr.children('td.code:last');
+                        newCodeTd.children().remove();
+                        newCodeTd.append(resolveChars.filter('.'+rClass).removeClass(rClass));
+                      }
+                    }
+                    //==CLEAN UP NEWLINE CHARACTERS
+                    nlChars.each(function(){
+                      var nlChar=jQuery(this);
+                      //if this newline character is selected
+                      if(nlChar.hasClass('sel')){
+                        //select the tr
+                        nlChar.parent().parent().addClass('nl-sel');
+                      }
+                      //if there is a character right of this nl character
+                      var rChar=nlChar.next();
+                      if(rChar.length>0){
+                        //remove the right character
+                        rChar.remove();
+                      }
+                      //if there is a character left of this nl character
+                      var lChar=nlChar.prev();
+                      if(lChar.length>0){
+                        //if the left character is ALSO a newline
+                        if(isTag(lChar,'nl')){
+                          //remove the duplicate nl character
+                          lChar.remove();
+                        }
+                      }
+                    });
+                    uibody.children('tr:last').removeClass('nl-sel');
+                    //==UPDATE THE LINE NUMBERS==
+                    //updateRowIndex is the first line number row that needs to be updated
+                    updateLineNumbers(updateRowIndex);
+                  }else{
+                    //selected text is all on the SAME code line (no newline characters selected)...
+
+                    //move the selected characters before the cursor element
+                    cr.before(selChars); cr.remove();
                   }
-                  selTxt==undefined;
                   //drop done
                   didDrop=true;
                 }
