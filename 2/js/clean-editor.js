@@ -1308,10 +1308,10 @@ var cleanEditor={
         //==FUNCTIONS TO DISPLAY UI TEXT==
           //convert a string text to something that can be dislayed in the ui
           var toUiStr=function(str){
+            var ret='';
             if(str==undefined){str='';}
             if(str.length>0){
               //for each character
-              var ret='';
               for(var c=0;c<str.length;c++){
                 var char=str[c];
                 switch(char){
