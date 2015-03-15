@@ -675,7 +675,7 @@ var cleanEditor={
                         }
                       }
                     });
-                    uibody.children('tr:last').removeClass('nl-sel');
+                    uibody.children('tr:last').removeClass('nl-sel').children('td.code:last').children('nl:last').removeClass('sel');
                     //==UPDATE THE LINE NUMBERS==
                     //updateRowIndex is the first line number row that needs to be updated
                     updateLineNumbers(updateRowIndex);
@@ -997,7 +997,7 @@ var cleanEditor={
                     }
                     endElem.removeClass('end-sel'); endTr.removeClass('end-sel');
                     //the last line shouldn't show having a newline character
-                    uibody.children('tr:last').removeClass('nl-sel').find('td.code > nl.sel:last').removeClass('sel');
+                    uibody.children('tr:last').removeClass('nl-sel').children('td.code:last').children('nl:last').removeClass('sel');
                   }
                 }
               }
@@ -1040,6 +1040,16 @@ var cleanEditor={
             var cr=getCur();
             //put the cursor at the end of the given line
             lineTd.prepend(cr);
+          };
+          //select the entire td.code line
+          var selectUiCodeLine=function(lineTd){
+            //select the ui code line
+            lineTd.children().addClass('sel');
+            lineTd.parent().addClass('nl-sel');
+            uibody.children('tr:last').removeClass('nl-sel').children('td.code:last').children('nl:last').removeClass('sel');
+            //clear the cahced selected range and update the textarea with a new selected range
+            selRange=undefined;
+            setTextareaSelected();
           };
           //set the cursor at the start of the document
           var setUiCurAtEnd=function(){
@@ -1203,11 +1213,28 @@ var cleanEditor={
             var numTd=tr.children('td:first').not('.evs'); numTd.addClass('evs');
             var lineTd=tr.children('td:last').not('.evs'); lineTd.addClass('evs');
             //add the new row's events
+            var dbl_click_timeout;
             numTd.mouseup(function(e){
               var td=jQuery(this);
               editorMouseRelease(e,td,function(){
-                //set the cursor at the end of the code line
-                setUiCurAtLineStart(td.parent().children('td.code:last')); //*** select line instead?
+                var codeTd=td.parent().children('td.code:last');
+                //if NOT double click
+                if(!td.hasClass('click')){
+                  //watch for double click for a short time
+                  td.addClass('click');
+                  clearTimeout(dbl_click_timeout);
+                  dbl_click_timeout=setTimeout(function(){
+                    td.removeClass('click');
+                  },225);
+                  //set the cursor at the start of the code line
+                  setUiCurAtLineStart(codeTd);
+                }else{
+                  //this is a double click...
+                  clearTimeout(dbl_click_timeout);
+                  td.removeClass('click');
+                  //select the entire code line
+                  selectUiCodeLine(codeTd);
+                }
               });
             });
             numTd.on('mousemove touchmove',function(e){
