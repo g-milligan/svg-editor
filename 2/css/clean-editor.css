@@ -35,7 +35,7 @@ cleaneditor editorui td.num{font-size:1rem;width:4rem;text-align:right;border-ri
 cleaneditor editorui td.num:hover{background-color:#ddd;}
 cleaneditor editorui td.num:after{content:"."}
 cleaneditor editorui tr td.code{background-color:#fff;}
-cleaneditor editorui tr.nl-sel td.code{background-color:rgb(24, 144, 179);}
+cleaneditor editorui tr.nl-sel td.code{background-color:rgb(0, 159, 207);}
 cleaneditor editorui td.code *{font-size:1rem;background-color:#fff;font-family:Arial, sans-serif;}
 cleaneditor editorui td.code .sel{background-color:rgb(0, 137, 178);color:#fff;}
 cleaneditor.drop-on-sel editorui td.code .sel{background-color:rgb(0, 91, 118);}
