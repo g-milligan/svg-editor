@@ -141,7 +141,6 @@ var cleanEditor={
             }
             return isCtl;
           };
-        //==EVENT HANDLERS==
           //create or find the cursor element, as needed
           var cursorElem;
           var getCur=function(){
@@ -309,6 +308,7 @@ var cleanEditor={
             }
             return cursorPos;
           };
+        //==EVENT HANDLERS==
           //function to create a line break at the cursor
           var breakAtCursor=function(cr){
             if(cr==undefined||cr.length<1){
@@ -444,6 +444,92 @@ var cleanEditor={
             }
             return selTrs;
           };
+          //function used to mark the rows that should be either merged OR deleted based on their selected characters
+          var getSelDelMergeTrs=function(selChars){
+            //get the tr elements that contain selected characters
+            var selTrs=getSelTrs(selChars,function(selTr){
+              //mark the tr rows, with ALL selected characters, with a "remove" class
+              var codeTd=selTr.children('td.code:last');
+              //if ALL of the characters in this tr are selected
+              if(codeTd.children().not('.sel').length<1){
+                //mark this tr as needing removal
+                selTr.addClass('remove');
+              }else{
+                //not ALL characters in this tr are selected...
+
+                //if the nl character is selected in this tr
+                if(codeTd.children('nl:last').hasClass('sel')){
+                  //mark this tr as needing to be merged with the next tr
+                  selTr.removeClass('nl-sel');
+                  selTr.addClass('merge');
+                }
+              }
+            });
+            return selTrs;
+          };
+          //merge two tr rows together, for example, if tr1 loses its newline character
+          var mergeAdjacentTrRows=function(tr1,tr2){
+            //if the merge-into row (tr1) exists
+            if(tr1!=undefined&&tr1.length>0){
+              //if tr2 NOT given
+              if(tr2==undefined){
+                //get tr2
+                tr2=tr1.next();
+              }
+              //make sure the tr doesn't have merge class anymore
+              tr1.removeClass('merge');
+              //get the td.code of the tr1 element
+              var td1=tr1.children('td.code:last');
+              //if there is a tr2 (if tr1 is NOT the last row)
+              if(tr2.length>0){
+                //merge the letters from tr2 to tr1
+                var td2=tr2.children('td.code:last');
+                td1.children(':last').after(td2.children());
+                //remove tr2
+                tr2.remove();
+              }
+              //if tr1 doesn't end with nl
+              if(td1.children(':last').filter('nl').length<1){
+                //restore a nl character at the end of the tr1 code line
+                td1.append('<nl>&nbsp;</nl>');
+                privObj.evsChars(td1.children('nl:last'));
+              }
+            }
+          };
+          //make sure nl characters are NOT doubled up AND the nl-sel classes are correct
+          var cleanNlChars=function(nlChars){
+            //if newline characters given
+            if(nlChars!=undefined){
+              //for each of the given newline characters
+              nlChars.each(function(){
+                var nlChar=jQuery(this);
+                //if this nl char was not in a removed row
+                if(nlChar.parent()!=undefined&&nlChar.parent().length>0){
+                  //if this newline character is selected
+                  if(nlChar.hasClass('sel')){
+                    //select the tr
+                    nlChar.parent().parent().addClass('nl-sel');
+                  }
+                  //if there is a character right of this nl character
+                  var rChar=nlChar.next();
+                  if(rChar.length>0){
+                    //remove the right character
+                    rChar.remove();
+                  }
+                  //if there is a character left of this nl character
+                  var lChar=nlChar.prev();
+                  if(lChar.length>0){
+                    //if the left character is ALSO a newline
+                    if(isTag(lChar,'nl')){
+                      //remove the duplicate nl character
+                      lChar.remove();
+                    }
+                  }
+                }
+              });
+            }
+            uibody.children('tr:last').removeClass('nl-sel').children('td.code:last').children('nl:last').removeClass('sel');
+          };
           //when the editor receives focus or SHOULD receive focus
           var focusOn=function(e,elem){
             //if doesn't already have focus
@@ -562,26 +648,8 @@ var cleanEditor={
                   //if there are any newline characters selected
                   var nlChars=selChars.filter('nl');
                   if(nlChars.length>0){
-                    //==MARK TR ELEMENTS FOR REMOVAL OR FOR MERGE WITH NEXT TR==
-                    //get the tr elements that contain selected characters
-                    var selTrs=getSelTrs(selChars,function(selTr){
-                      //mark the tr rows, with ALL selected characters, with a "remove" class
-                      var codeTd=selTr.children('td.code:last');
-                      //if ALL of the characters in this tr are selected
-                      if(codeTd.children().not('.sel').length<1){
-                        //mark this tr as needing removal
-                        selTr.addClass('remove');
-                      }else{
-                        //not ALL characters in this tr are selected...
-
-                        //if the nl character is selected in this tr
-                        if(codeTd.children('nl:last').hasClass('sel')){
-                          //mark this tr as needing to be merged with the next tr
-                          selTr.removeClass('nl-sel');
-                          selTr.addClass('merge');
-                        }
-                      }
-                    });
+                    //==MARK TR ELEMENTS, EITHER FOR REMOVAL, OR FOR MERGE==
+                    var selTrs=getSelDelMergeTrs(selChars);
                     //==FIGURE OUT THE EARLIEST AFFECTED ROW'S INDEX==
                     //this row index will be the first row number to update
                     var cursorRow=cr.parent().parent();
@@ -598,27 +666,8 @@ var cleanEditor={
                     //==REMOVE EMPTY TR ELEMENTS
                     //remove the tr rows that are now empty
                     selTrs.filter('.remove').remove(); selTrs=selTrs.not('.remove');
-                    //==MERGE TR ELEMENTS THAT LOST THEIR NEWLINE CHARACTER
-                    //for each tr that no longer ends with a newline, nl, character (needs merge)
-                    selTrs.filter('.merge').each(function(){
-                      //if there is a next row that needs to merge into this row
-                      var intoTr=jQuery(this); intoTr.removeClass('merge');
-                      var intoCodeTd=intoTr.children('td.code:last');
-                      var fromTr=intoTr.next();
-                      if(fromTr.length>0){
-                        //merge the letters
-                        var fromCodeTd=fromTr.children('td.code:last');
-                        intoCodeTd.children(':last').after(fromCodeTd.children());
-                        //remove fromTr
-                        fromTr.remove();
-                      }else{
-                        //no next row to be merged into this merge row...
-
-                        //just restore a nl character at the end of the intoTr code line
-                        intoCodeTd.append('<nl>&nbsp;</nl>');
-                        privObj.evsChars(intoCodeTd.children('nl:last'));
-                      }
-                    });
+                    //==MERGE TR ELEMENTS THAT LOST THEIR NEWLINE CHARACTER==
+                    mergeAdjacentTrRows(selTrs.eq(0));
                     //==ADD NEW CODE LINE ROWS AFTER EACH NEWLINE CHARACTER IN THE DRAG-TO ROW==
                     var rowIndex=0;
                     //for each character in this row (where the selected characters were moved)
@@ -652,30 +701,7 @@ var cleanEditor={
                       }
                     }
                     //==CLEAN UP NEWLINE CHARACTERS
-                    nlChars.each(function(){
-                      var nlChar=jQuery(this);
-                      //if this newline character is selected
-                      if(nlChar.hasClass('sel')){
-                        //select the tr
-                        nlChar.parent().parent().addClass('nl-sel');
-                      }
-                      //if there is a character right of this nl character
-                      var rChar=nlChar.next();
-                      if(rChar.length>0){
-                        //remove the right character
-                        rChar.remove();
-                      }
-                      //if there is a character left of this nl character
-                      var lChar=nlChar.prev();
-                      if(lChar.length>0){
-                        //if the left character is ALSO a newline
-                        if(isTag(lChar,'nl')){
-                          //remove the duplicate nl character
-                          lChar.remove();
-                        }
-                      }
-                    });
-                    uibody.children('tr:last').removeClass('nl-sel').children('td.code:last').children('nl:last').removeClass('sel');
+                    cleanNlChars(nlChars);
                     //==UPDATE THE LINE NUMBERS==
                     //updateRowIndex is the first line number row that needs to be updated
                     updateLineNumbers(updateRowIndex);
@@ -1259,6 +1285,196 @@ var cleanEditor={
             evsChars(tr.children('td:last').children());
           };
           privObj['evsTr']=evsTr;
+          //function to record the current caret position in the textarea
+          var rememberPos=function(e){
+            var pos={};
+            pos['start']=ta[0].selectionStart;
+            pos['end']=ta[0].selectionEnd;
+            pos['has_selected']=pos['start']!=pos['end'];
+            ta[0]['rememberCursorPos']=pos;
+            return pos;
+          }
+          //function to get the remembered caret position in the textarea
+          var getPrevPos=function(){
+            var pos;
+            if(ta[0].hasOwnProperty('rememberCursorPos')){
+              pos=ta[0]['rememberCursorPos'];
+              //clear for next time
+              ta[0]['rememberCursorPos']=undefined;
+            }
+            return pos;
+          }
+          //function that deletes selected characters (if any) BEFORE writing additional characters (if any)
+          var deleteSelectedChars=function(cr,pos){
+            var didDel=false;
+            //if any text was selected in the textarea
+            if(pos['has_selected']){
+              didDel=true;
+              //get the selected ui characters
+              var selChars=uibody.find('tr td.code > .sel');
+              //set the cursor before the first selected character
+              selChars.eq(0).before(cr);
+              //if there are any newline characters selected
+              var nlChars=selChars.filter('nl');
+              if(nlChars.length>0){
+                //==MARK TR ELEMENTS, EITHER FOR REMOVAL, OR FOR MERGE==
+                var selTrs=getSelDelMergeTrs(selChars);
+                //==DELETE THE ROWS THAT ARE FULLY SELECTED==
+                selTrs.filter('.remove').remove(); selTrs=selTrs.not('.remove');
+                //==DELETE THE SELECTED CHARACTERS IN THE MERGE ROWS==
+                selTrs.children('td.code').children('.sel').remove();
+                //==MERGE THE ROWS THAT NEED MERGING==
+                var firstMergeRow=selTrs.eq(0);
+                mergeAdjacentTrRows(firstMergeRow);
+                //==MAKE SURE THE NEWLINE CHARACTERS ARE NOT DOUBLED UP AND NL-SEL ARE CLASSES CORRECT==
+                cleanNlChars(nlChars);
+                //==UPDATE THE LINE NUMBERS==
+                //updateRowIndex is the first line number row that needs to be updated
+                updateLineNumbers(firstMergeRow);
+              }else{
+                //no newline characters selected... delete the selected characters
+                selChars.remove();
+              }
+            }
+            return didDel;
+          };
+          //handle either single backspace OR single delete
+          var charDelete=function(e,cr){
+            //if a special key is being held down now: align the ui td.code line with the actual textarea line
+            //***
+            //else just delete or backspace one character
+            //***
+          };
+          //function to handle all of the up-keys for any key
+          var upKey=function(e,handlers){
+            //if there is a previous position
+            var pos=getPrevPos();
+            if(pos!=undefined){
+              //get the ui cursor element
+              var cr=getCur();
+              //function: get a handler
+              var getHandler=function(name){
+                var handler;
+                if(handlers!=undefined){
+                  //if this handler exists
+                  if(handlers.hasOwnProperty(name)){
+                    //get the handler by name
+                    handler=handlers[name];
+                  }
+                }
+                return handler;
+              };
+              //function: fire a handler
+              var fireHandler=function(name){
+                var fired=false;
+                //if there is a handler
+                var handler=getHandler(name);
+                if(handler!=undefined){
+                  //fire the handler
+                  handler(cr,pos);
+                  fired=true;
+                }
+                return fired;
+              };
+              //if there were selected characters to delete
+              if(deleteSelectedChars(cr,pos)){
+                //fire the handler for AFTER the selected characters were deleted
+                fireHandler('afterDelSel');
+              }else{
+                //no selected characters... fire the NO selected characters event
+                fireHandler('ifNoSel');
+              }
+              //fire the finish-up handler
+              fireHandler('finishUp');
+            }
+          };
+          //function to handle delete key release
+          var upDeleteKey=function(e){
+            upKey(e,{'ifNoSel':function(cr,pos){
+              //handle remove character
+              charDelete(e,cr);
+            }});
+          };
+          //function to handle delete key down
+          var downDeleteKey=function(e){
+            upDeleteKey(e); //handle up event if holding down the key
+            var pos=rememberPos(e); //remember this new cursor position
+            console.log('remember pos downDeleteKey');
+          };
+          //function to handle backspace release
+          var upBackspaceKey=function(e){
+            upKey(e,{'ifNoSel':function(cr,pos){
+              //handle remove character
+              charDelete(e,cr);
+            }});
+          };
+          //function to handle backspace down
+          var downBackspaceKey=function(e){
+            upBackspaceKey(e); //handle up event if holding down the key
+            var pos=rememberPos(e); //remember this new cursor position
+            console.log('remember pos downBackspaceKey');
+          };
+          //function to handle enter key release
+          var upEnterKey=function(e){
+            upKey(e,function(){ //*** passing function argument incorrectly... fix it.
+              //***
+            });
+          };
+          //function to handle enter key down
+          var downEnterKey=function(e){
+            upEnterKey(e); //handle up event if holding down the key
+            var pos=rememberPos(e); //remember this new cursor position
+            console.log('remember pos downEnterKey');
+          };
+          //function to handle tab key release
+          var upTabKey=function(e){
+            upKey(e,function(){
+              //***
+            });
+          };
+          //function to handle tab key down
+          var downTabKey=function(e){
+            upTabKey(e); //handle up event if holding down the key
+            var pos=rememberPos(e); //remember this new cursor position
+            console.log('remember pos downTabKey');
+          };
+          //function to handle arrow key release
+          var upArrowKey=function(e,which){
+            upKey(e,function(){
+              switch(which){
+                case 'up':
+                  //***
+                  break;
+                case 'right':
+                  //***
+                  break;
+                case 'down':
+                  //***
+                  break;
+                case 'left':
+                  //***
+                  break;
+              }
+            });
+          };
+          //function to handle arrow key down
+          var downArrowKey=function(e,which){
+            upArrowKey(e,which); //handle up event if holding down the key
+            var pos=rememberPos(e); //remember this new cursor position
+            console.log('remember pos downArrowKey');
+          };
+          //function to handle character key release
+          var upCharKey=function(e){
+            upKey(e,function(){
+              //***
+            });
+          };
+          //function to handle character key down
+          var downCharKey=function(e){
+            upCharKey(e); //handle up event if holding down the key
+            var pos=rememberPos(e); //remember this new cursor position
+            console.log('remember pos downCharKey');
+          };
         //==ATTACH EVENTS==
           //mouse up event
           jQuery('body:first').mouseup(function(e){
@@ -1311,25 +1527,54 @@ var cleanEditor={
             stopBubbleUp(e);
             switch(e.keyCode){
               case 8: //back-space
-                break;
+                downBackspaceKey(e); break;
               case 46: //delete key
-                break;
+                downDeleteKey(e); break;
               case 13: //enter key
+                downEnterKey(e); break;
+              case 16: //shift key
                 break;
+              case 27: //escape key break;
+              case 9: //tab key
+                downTabKey(e); break;
+              case 37: //left arrow
+                downArrowKey(e,'left'); break;
+              case 38: //up arrow
+                downArrowKey(e,'up'); break;
+              case 39: //right arrow
+                downArrowKey(e,'right'); break;
+              case 40: //down arrow
+                downArrowKey(e,'down'); break;
+              default:
+                downCharKey(e); break;
+            }
+          });
+          //keypress textarea
+          ta.keyup(function(e){
+            stopBubbleUp(e);
+            switch(e.keyCode){
+              case 8: //back-space
+                upBackspaceKey(e); break;
+              case 46: //delete key
+                upDeleteKey(e); break;
+              case 13: //enter key
+                upEnterKey(e); break;
               case 16: //shift key
                 break;
               case 27: //escape key
                 break;
               case 9: //tab key
-                break;
+                upTabKey(e); break;
               case 37: //left arrow
-                break;
+                upArrowKey(e,'left'); break;
               case 38: //up arrow
-                break;
+                upArrowKey(e,'up'); break;
               case 39: //right arrow
-                break;
+                upArrowKey(e,'right'); break;
               case 40: //down arrow
-                break;
+                upArrowKey(e,'down'); break;
+              default:
+                upCharKey(e); break;
             }
           });
         //==FUNCTIONS TO DISPLAY UI TEXT==
