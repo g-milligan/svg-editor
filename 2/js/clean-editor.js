@@ -26,7 +26,7 @@ var cleanEditor={
           //calculate px height for the textarea, ta
           var heightPx=ta.outerHeight();
           //get the display of the textarea, ta
-          var taDisplay=ta.css('display'); if(taDisplay=='inline'){taDisplay='inline-block';}
+          var taDisplay=ta.css('display'); if(taDisplay==='inline'){taDisplay='inline-block';}
           //add the parent wrapper
           ta.after('<cleaneditor></cleaneditor>'); var wrap=ta.next('cleaneditor:first');
           wrap.append(ta);
@@ -57,7 +57,7 @@ var cleanEditor={
                 if(elem[0].hasOwnProperty('tagName')){
                   if(tag!=undefined){
                     tag=tag.toLowerCase();
-                    if(elem[0].tagName.toLowerCase()==tag){
+                    if(elem[0].tagName.toLowerCase()===tag){
                       itIs=true;
                     }
                   }else{
@@ -73,10 +73,10 @@ var cleanEditor={
           var strRAll=function(theStr,charToReplace,replaceWith){
             if(theStr!=undefined){
               if(charToReplace==undefined){charToReplace='';}
-              if(theStr.indexOf(charToReplace)!=-1){
+              if(theStr.indexOf(charToReplace)!==-1){
                 if(replaceWith==undefined){replaceWith='';}
-                if(charToReplace!=replaceWith){
-                  while(theStr.indexOf(charToReplace)!=-1){
+                if(charToReplace!==replaceWith){
+                  while(theStr.indexOf(charToReplace)!==-1){
                     theStr=theStr.replace(charToReplace,replaceWith);
                   }
                 }
@@ -617,7 +617,7 @@ var cleanEditor={
             //end
             taState['end']=ta[0].selectionEnd;
             //has selection
-            taState['has_selected']=taState['start']!=taState['end'];
+            taState['has_selected']=taState['start']!==taState['end'];
             //selection count
             if(taState['has_selected']){
               //calculate the number selected
@@ -650,7 +650,7 @@ var cleanEditor={
             for(var key in taState){
               if(taState.hasOwnProperty(key)){
                 //if not a value type that doesn't count when changed
-                if(key!='changed'&&key!='eType'&&key!='keyCode'){
+                if(key!=='changed'&&key!=='eType'&&key!=='keyCode'){
                   taState['changed'][key]={};
                   //if no previous state
                   if(origState==undefined){
@@ -670,7 +670,7 @@ var cleanEditor={
                         var newLen=taState[key].length;
                         var oldLen=origState[key].length;
                         //if this is the val
-                        if(key=='val'){
+                        if(key==='val'){
                           //if nothing selected now
                           if(!taState['has_selected']){
                             //if this is a change from last time
@@ -686,9 +686,9 @@ var cleanEditor={
                           }
                         }
                         //length never changed
-                        if(newLen==oldLen){
+                        if(newLen===oldLen){
                           //if the value changed
-                          if(taState[key]!=origState[key]){
+                          if(taState[key]!==origState[key]){
                             taState['changed'][key]['flag']=true;
                             taState['changed'][key]['detail']='modified';
                             taState['changed']['anything']=true;
@@ -710,7 +710,7 @@ var cleanEditor={
                       case 'number':
                         //if the value changed
                         taState['changed'][key]['difference']=0;
-                        if(taState[key]!=origState[key]){
+                        if(taState[key]!==origState[key]){
                           taState['changed'][key]['flag']=true;
                           taState['changed']['anything']=true;
                           //if the new number is less than the old number
@@ -726,7 +726,7 @@ var cleanEditor={
                       break;
                       default:
                         //not a string nor number... if the value changed
-                        if(taState[key]!=origState[key]){
+                        if(taState[key]!==origState[key]){
                           taState['changed'][key]['flag']=true;
                           taState['changed']['anything']=true;
                           taState['changed'][key]['detail']='modified';
@@ -925,7 +925,7 @@ var cleanEditor={
                   var isThere=true;
                   var adjElem;
                   //get the adjacent element
-                  if(leftOrRight=='left'){adjElem=elem.prev();}
+                  if(leftOrRight==='left'){adjElem=elem.prev();}
                   else{
                     //no element can appear AFTER nl
                     if(isTag(elem,'nl')){
@@ -948,7 +948,7 @@ var cleanEditor={
                 var moveCurNextTo=function(elem,leftOrRight){
                   //if the cursor is NOT already in position
                   if(!crAlreadyThere(elem,leftOrRight)){
-                    if(leftOrRight=='left'){
+                    if(leftOrRight==='left'){
                       //move the cursor BEFORE the element
                       elem.before(cr);
                     }else{
@@ -995,7 +995,7 @@ var cleanEditor={
                       //is the mouse closer to the right or left edge of the character?
                       var closerEdge=findCloserEdgeX(e,overElem);
                       //if closer to the left edge (or centered)
-                      if(closerEdge.indexOf('left')==0||closerEdge.indexOf('center')==0){
+                      if(closerEdge.indexOf('left')===0||closerEdge.indexOf('center')===0){
                         moveCurNextTo(overElem,'left');
                       }else{
                         //closer to the right edge...
@@ -1013,7 +1013,7 @@ var cleanEditor={
             var selObj=window.getSelection();
             if(selObj!=undefined){
               if(selObj.hasOwnProperty('type')){
-                if(selObj.type.toLowerCase()=='range'){
+                if(selObj.type.toLowerCase()==='range'){
                   //get the start of the selection
                   var startElem=jQuery(selObj.anchorNode.parentNode);
                   //if selected start element is a code letter
@@ -1036,11 +1036,11 @@ var cleanEditor={
                     //if selection starts and ends in the same row
                     var startRowIndex=startTr.index();
                     var endRowIndex=endTr.index();
-                    if(startRowIndex==endRowIndex){
+                    if(startRowIndex===endRowIndex){
                       //if the start and end letter are the same
                       var startCharIndex=startElem.index();
                       var endCharIndex=endElem.index();
-                      if(startCharIndex==endCharIndex){
+                      if(startCharIndex===endCharIndex){
                         direction='none';
                       }else if(startCharIndex<endCharIndex){
                         //start char is before end char
@@ -1063,7 +1063,7 @@ var cleanEditor={
                     var nextNew=function(charElem,dir){
                       var el;
                       //get the next adjacent element
-                      if(dir=='right'){el=charElem.next();}
+                      if(dir==='right'){el=charElem.next();}
                       else{el=charElem.prev();}
                       //if there is another adjacent element
                       if(el.length>0){
@@ -1089,7 +1089,7 @@ var cleanEditor={
                     var nextNewFullRow=function(rEl,dir){
                       var el;
                       //get the next adjacent element
-                      if(dir=='right'){el=rEl.next();}
+                      if(dir==='right'){el=rEl.next();}
                       else{el=rEl.prev();}
                       //if there is another adjacent element
                       if(el.length>0){
@@ -1142,7 +1142,7 @@ var cleanEditor={
                         //should the cursor be to the right or left?
                         var closerEdge=findCloserEdgeX(e,startElem);
                         //if the cursor is closer to the left edge of the selection
-                        if(closerEdge.indexOf('left')==0||closerEdge.indexOf('center')==0){
+                        if(closerEdge.indexOf('left')===0||closerEdge.indexOf('center')===0){
                           //cursor should appear to the left
                           retObj['cur_pos']='left';
                         }else{
@@ -1201,7 +1201,7 @@ var cleanEditor={
               //is the mouse closer to the left or right of the char elem
               var closerEdge=findCloserEdgeX(e,elem);
               //if closer to the left edge (or centered)
-              if(closerEdge.indexOf('left')==0||closerEdge.indexOf('center')==0){
+              if(closerEdge.indexOf('left')===0||closerEdge.indexOf('center')===0){
                 //put the cursor to the LEFT of the character element
                 elem.before(cr);
               }else{
@@ -1255,7 +1255,7 @@ var cleanEditor={
               var caretPos=getCurPos();
               //==SET THE CURSOR POSITION IN THE HIDDEN TEXTAREA==
               //if the cursor is NOT already at the correct position
-              if(ta[0].selectionStart!=caretPos){
+              if(ta[0].selectionStart!==caretPos){
                 //set the new caret position in the textarea
                 ta[0].setSelectionRange(caretPos, caretPos);
                 //record the state changes to the textarea
@@ -1270,11 +1270,11 @@ var cleanEditor={
             if(range!=undefined){
               var changeMade=false;
               //set the textarea selection range
-              if(range.start!=ta[0].selectionStart){
+              if(range.start!==ta[0].selectionStart){
                 ta[0].selectionStart=range.start;
                 changeMade=true;
               }
-              if(range.end!=ta[0].selectionEnd){
+              if(range.end!==ta[0].selectionEnd){
                 ta[0].selectionEnd=range.end;
                 changeMade=true;
               }
@@ -1502,7 +1502,7 @@ var cleanEditor={
             //==ONLY ONE CHARACTER WAS REMOVED==
             var newStart=ta[0].selectionStart;
             //if cursor moved left (decreased - )
-            if(taState['changed']['start']['detail']=='-'){
+            if(taState['changed']['start']['detail']==='-'){
               //if the cursor is NOT already at the front of the line
               var leftChar=cr.prev();
               if(leftChar.length>0){
@@ -1587,14 +1587,14 @@ var cleanEditor={
           });
           //handle routing to the correct key action handler
           var taKeyed=function(e,eType){
-            //set the new textarea state (if changed)
+            //set the new textarea state (if anything changed)
             trackTaStateChanges(e,eType);
             //if anything changed in the textarea
             if(taState['changed']['anything']){
               console.log('EVENT: '+eType);
               //get the ui cursor
               var cr=getCur();
-              //if the text value changed
+              //if the text value changed (based on boolean flag)
               if(taState['changed']['val']['flag']){
                 //get the number of characters removed or added
                 var charDiff=taState['changed']['val']['difference'];
@@ -1614,7 +1614,7 @@ var cleanEditor={
                     //if there are any characters left to delete
                     if(charDiff>0){
                       //if only one character removed
-                      if(charDiff==1){
+                      if(charDiff===1){
                         //remove one character either right or left of the ui cursor
                         removeOneUiChar(cr);
                       }else{
@@ -1757,7 +1757,7 @@ var cleanEditor={
               var rowTxt='';
               //if there is another new line character in txt
               var indexOfNewLine=txt.indexOf('\n');
-              if(indexOfNewLine!=-1){
+              if(indexOfNewLine!==-1){
                 //get the text before this next new line character
                 rowTxt=txt.substring(0,indexOfNewLine);
                 //remove this row from the txt
