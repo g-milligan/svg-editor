@@ -141,6 +141,17 @@ var cleanEditor={
             }
             return isCtl;
           };
+          //detect MAC command key
+          var isHeldCommand=function(e){
+            var isCmd=false;
+            //if Mac command key held
+            if(e.metaKey!=undefined){
+              if(e.metaKey){
+                isCmd=true;
+              }
+            }
+            return isCmd;
+          };
           //create or find the cursor element, as needed
           var cursorElem;
           var getCur=function(){
@@ -494,6 +505,8 @@ var cleanEditor={
                 td1.append('<nl>&nbsp;</nl>');
                 privObj.evsChars(td1.children('nl:last'));
               }
+              //remove all but the last nl character
+              td1.children('nl').not('nl:last').remove();
             }
           };
           //make sure nl characters are NOT doubled up AND the nl-sel classes are correct
@@ -596,6 +609,150 @@ var cleanEditor={
               wrap.removeClass('drag');
             }
           };
+          //function: record the current state of the text area
+          var taState={};
+          var recordTaState=function(){
+            //start
+            taState['start']=ta[0].selectionStart;
+            //end
+            taState['end']=ta[0].selectionEnd;
+            //has selection
+            taState['has_selected']=taState['start']!=taState['end'];
+            //selection count
+            if(taState['has_selected']){
+              //calculate the number selected
+              taState['count_selected']=taState['end']-taState['start'];
+            }else{
+              //no selectd characters
+              taState['count_selected']=0;
+            }
+            //value
+            taState['val']=ta.val();
+          };
+          //function: record the current state of the text area AND indicate IF/HOW it changed from the previous state
+          //these tracked changes help determine how to align the UI with the textarea when keys change data in the textarea
+          var trackTaStateChanges=function(e,eType){
+            var origState;
+            //if NOT the first time this function is called to track the state changes
+            if(taState.hasOwnProperty('start')){
+              //save this previous state as an original
+              origState={};
+              for(var key in taState){
+                if(taState.hasOwnProperty(key)){
+                  origState[key]=taState[key];
+                }
+              }
+            }
+            //update the basic tracked values
+            recordTaState();
+            //indicate changed values
+            taState['changed']={'anything':false};
+            for(var key in taState){
+              if(taState.hasOwnProperty(key)){
+                //if not a value type that doesn't count when changed
+                if(key!='changed'&&key!='eType'&&key!='keyCode'){
+                  taState['changed'][key]={};
+                  //if no previous state
+                  if(origState==undefined){
+                    //any and all state values have changed
+                    taState['changed'][key]['flag']=true;
+                    taState['changed'][key]['detail']='init';
+                    taState['changed'][key]['difference']=-1;
+                    taState['changed']['anything']=true;
+                  }else{
+                    //there was a previous state...
+                    taState['changed'][key]['flag']=false;
+                    taState['changed'][key]['detail']='same';
+                    //if this value is a string
+                    switch(typeof taState[key]){
+                      case 'string':
+                        taState['changed'][key]['difference']=0;
+                        var newLen=taState[key].length;
+                        var oldLen=origState[key].length;
+                        //if this is the val
+                        if(key=='val'){
+                          //if nothing selected now
+                          if(!taState['has_selected']){
+                            //if this is a change from last time
+                            if(taState['changed']['count_selected']['flag']){
+                              //get the number of characters that WERE selected
+                              var numPrevSel=taState['changed']['count_selected']['difference'];
+                              //if new characters were inserted in addition to the selected characters being deleted
+                              if(newLen>(oldLen-numPrevSel)){
+                                //do not count the selected letters that were removed, as part of the old length
+                                oldLen-=numPrevSel;
+                              }
+                            }
+                          }
+                        }
+                        //length never changed
+                        if(newLen==oldLen){
+                          //if the value changed
+                          if(taState[key]!=origState[key]){
+                            taState['changed'][key]['flag']=true;
+                            taState['changed'][key]['detail']='modified';
+                            taState['changed']['anything']=true;
+                          }
+                        }else{
+                          //length changed... if letters were removed
+                          taState['changed'][key]['flag']=true;
+                          taState['changed']['anything']=true;
+                          if(newLen<oldLen){
+                            taState['changed'][key]['detail']='-';
+                            taState['changed'][key]['difference']=oldLen-newLen;
+                          }else{
+                            //string is longer... letters added (not counting selected letters that were removed)
+                            taState['changed'][key]['detail']='+';
+                            taState['changed'][key]['difference']=newLen-oldLen;
+                          }
+                        }
+                      break;
+                      case 'number':
+                        //if the value changed
+                        taState['changed'][key]['difference']=0;
+                        if(taState[key]!=origState[key]){
+                          taState['changed'][key]['flag']=true;
+                          taState['changed']['anything']=true;
+                          //if the new number is less than the old number
+                          if(taState[key]<origState[key]){
+                            taState['changed'][key]['detail']='-';
+                            taState['changed'][key]['difference']=origState[key]-taState[key];
+                          }else{
+                            //new number is greater than the old number...
+                            taState['changed'][key]['detail']='+';
+                            taState['changed'][key]['difference']=taState[key]-origState[key];
+                          }
+                        }
+                      break;
+                      default:
+                        //not a string nor number... if the value changed
+                        if(taState[key]!=origState[key]){
+                          taState['changed'][key]['flag']=true;
+                          taState['changed']['anything']=true;
+                          taState['changed'][key]['detail']='modified';
+                        }
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+            //if anything changed
+            if(taState['changed']['anything']){
+              //set what keycode triggered the change
+              taState['keyCode']=-1;
+              if(e!=undefined){
+                if(e.keyCode!=undefined){
+                  taState['keyCode']=e.keyCode;
+                }
+              }
+              //set what event type triggered the change
+              taState['eType']='?';
+              if(eType!=undefined){
+                taState['eType']=eType;
+              }
+            }
+          };
           //deselect any selected ui letters
           var deselect=function(){
             //remove selection from ui elements
@@ -604,6 +761,8 @@ var cleanEditor={
               uibody.children('tr.nl-sel').removeClass('nl-sel');
               //remove selection from hidden textarea
               ta[0].selectionStart=ta[0].selectionEnd=-1;
+              //record the state changes to the textarea
+              recordTaState();
             }
           };
           //drop the drag-selected text onto the current cursor position
@@ -637,6 +796,7 @@ var cleanEditor={
                   newTxt=undefined; //drop in memory
                   //insert the selected text at the new position and update the textarea value
                   ta.val(txtBeforeIns+selTxt+txtAfterIns); txtAfterIns=undefined; txtBeforeIns=undefined; selTxt==undefined;
+                  taState['val']=ta.val();
                   //==UPDATE THE CURSOR POSITION AND SELECTION RANGE INDEXES==
                   cursorPosition=newPos; selRange.start=newPos; selRange.end=newPos+selLen;
                   //==SELECT THE MOVED TEXT IN THE TEXT AREA==
@@ -711,6 +871,8 @@ var cleanEditor={
                     //move the selected characters before the cursor element
                     cr.before(selChars); cr.remove();
                   }
+                  //record the state changes to the textarea
+                  recordTaState();
                   //drop done
                   didDrop=true;
                 }
@@ -1096,6 +1258,8 @@ var cleanEditor={
               if(ta[0].selectionStart!=caretPos){
                 //set the new caret position in the textarea
                 ta[0].setSelectionRange(caretPos, caretPos);
+                //record the state changes to the textarea
+                recordTaState();
               }
             }
           };
@@ -1104,12 +1268,19 @@ var cleanEditor={
             //get the start and end positions of the selection range
             var range=getSelRange();
             if(range!=undefined){
+              var changeMade=false;
               //set the textarea selection range
               if(range.start!=ta[0].selectionStart){
                 ta[0].selectionStart=range.start;
+                changeMade=true;
               }
               if(range.end!=ta[0].selectionEnd){
                 ta[0].selectionEnd=range.end;
+                changeMade=true;
+              }
+              if(changeMade){
+                //record the state changes to the textarea
+                recordTaState();
               }
             }
           };
@@ -1285,195 +1456,87 @@ var cleanEditor={
             evsChars(tr.children('td:last').children());
           };
           privObj['evsTr']=evsTr;
-          //function to record the current caret position in the textarea
-          var rememberPos=function(e){
-            var pos={};
-            pos['start']=ta[0].selectionStart;
-            pos['end']=ta[0].selectionEnd;
-            pos['has_selected']=pos['start']!=pos['end'];
-            ta[0]['rememberCursorPos']=pos;
-            return pos;
-          }
-          //function to get the remembered caret position in the textarea
-          var getPrevPos=function(){
-            var pos;
-            if(ta[0].hasOwnProperty('rememberCursorPos')){
-              pos=ta[0]['rememberCursorPos'];
-              //clear for next time
-              ta[0]['rememberCursorPos']=undefined;
-            }
-            return pos;
-          }
-          //function that deletes selected characters (if any) BEFORE writing additional characters (if any)
-          var deleteSelectedChars=function(cr,pos){
-            var didDel=false;
-            //if any text was selected in the textarea
-            if(pos['has_selected']){
-              didDel=true;
-              //get the selected ui characters
-              var selChars=uibody.find('tr td.code > .sel');
-              //set the cursor before the first selected character
-              selChars.eq(0).before(cr);
-              //if there are any newline characters selected
-              var nlChars=selChars.filter('nl');
-              if(nlChars.length>0){
-                //==MARK TR ELEMENTS, EITHER FOR REMOVAL, OR FOR MERGE==
-                var selTrs=getSelDelMergeTrs(selChars);
-                //==DELETE THE ROWS THAT ARE FULLY SELECTED==
-                selTrs.filter('.remove').remove(); selTrs=selTrs.not('.remove');
-                //==DELETE THE SELECTED CHARACTERS IN THE MERGE ROWS==
-                selTrs.children('td.code').children('.sel').remove();
-                //==MERGE THE ROWS THAT NEED MERGING==
-                var firstMergeRow=selTrs.eq(0);
-                mergeAdjacentTrRows(firstMergeRow);
-                //==MAKE SURE THE NEWLINE CHARACTERS ARE NOT DOUBLED UP AND NL-SEL ARE CLASSES CORRECT==
-                cleanNlChars(nlChars);
-                //==UPDATE THE LINE NUMBERS==
-                //updateRowIndex is the first line number row that needs to be updated
-                updateLineNumbers(firstMergeRow);
-              }else{
-                //no newline characters selected... delete the selected characters
-                selChars.remove();
-              }
-            }
-            return didDel;
-          };
-          //handle either single backspace OR single delete
-          var charDelete=function(e,cr){
-            //if a special key is being held down now: align the ui td.code line with the actual textarea line
-            //***
-            //else just delete or backspace one character
-            //***
-          };
-          //function to handle all of the up-keys for any key
-          var upKey=function(e,handlers){
-            //if there is a previous position
-            var pos=getPrevPos();
-            if(pos!=undefined){
-              //get the ui cursor element
-              var cr=getCur();
-              //function: get a handler
-              var getHandler=function(name){
-                var handler;
-                if(handlers!=undefined){
-                  //if this handler exists
-                  if(handlers.hasOwnProperty(name)){
-                    //get the handler by name
-                    handler=handlers[name];
+          //function that deletes selected ui characters in order to align with the deleted textarea characters
+          var deleteSelectedUiChars=function(cr){
+            var delCount=0;
+            //if the selected state changed in the textarea
+            if(taState['changed']['has_selected']['flag']){
+              //if there is no longer anything selected in the textarea
+              if(!taState['has_selected']){
+                //need to align ui with the textarea by removing selected ui chars...
+
+                //get the selected ui characters, if any
+                var selChars=uibody.find('tr td.code > .sel');
+                delCount=selChars.length;
+                if(delCount>0){
+                  //set the cursor before the first selected character
+                  selChars.eq(0).before(cr);
+                  //if there are any newline characters selected
+                  var nlChars=selChars.filter('nl');
+                  if(nlChars.length>0){
+                    //==MARK TR ELEMENTS, EITHER FOR REMOVAL, OR FOR MERGE==
+                    var selTrs=getSelDelMergeTrs(selChars);
+                    //==DELETE THE ROWS THAT ARE FULLY SELECTED==
+                    selTrs.filter('.remove').remove(); selTrs=selTrs.not('.remove');
+                    //==DELETE THE SELECTED CHARACTERS IN THE MERGE ROWS==
+                    selTrs.children('td.code').children('.sel').remove();
+                    //==MERGE THE ROWS THAT NEED MERGING==
+                    var firstMergeRow=selTrs.eq(0);
+                    mergeAdjacentTrRows(firstMergeRow);
+                    //==MAKE SURE THE NEWLINE CHARACTERS ARE NOT DOUBLED UP AND NL-SEL ARE CLASSES CORRECT==
+                    cleanNlChars(nlChars);
+                    //==UPDATE THE LINE NUMBERS==
+                    //updateRowIndex is the first line number row that needs to be updated
+                    updateLineNumbers(firstMergeRow);
+                  }else{
+                    //no newline characters selected... delete the selected characters
+                    selChars.remove();
                   }
                 }
-                return handler;
-              };
-              //function: fire a handler
-              var fireHandler=function(name){
-                var fired=false;
-                //if there is a handler
-                var handler=getHandler(name);
-                if(handler!=undefined){
-                  //fire the handler
-                  handler(cr,pos);
-                  fired=true;
-                }
-                return fired;
-              };
-              //if there were selected characters to delete
-              if(deleteSelectedChars(cr,pos)){
-                //fire the handler for AFTER the selected characters were deleted
-                fireHandler('afterDelSel');
-              }else{
-                //no selected characters... fire the NO selected characters event
-                fireHandler('ifNoSel');
               }
-              //fire the finish-up handler
-              fireHandler('finishUp');
+            }
+            return delCount;
+          };
+          //function: remove ONLY ONE character (either right or left of the cursor)
+          var removeOneUiChar=function(cr){
+            //==ONLY ONE CHARACTER WAS REMOVED==
+            var newStart=ta[0].selectionStart;
+            //if cursor moved left (decreased - )
+            if(taState['changed']['start']['detail']=='-'){
+              //if the cursor is NOT already at the front of the line
+              var leftChar=cr.prev();
+              if(leftChar.length>0){
+                //delete the left character in the UI
+                leftChar.remove();
+              }else{
+                //cursor is already at the front of the line... merge with previous line
+                var thisTr=cr.parent().parent(); var prevTr=thisTr.prev();
+                //if there is a previous line
+                if(prevTr.length>0){
+                  mergeAdjacentTrRows(prevTr,thisTr); updateLineNumbers(prevTr);
+                }
+              }
+            }else{
+              //cursor didn't move index position... probably deleted character to the right
+
+              //if the cursor is NOT already at the end of the line (if NOT left of end newline character)
+              var rightChar=cr.next();
+              if(!isTag(rightChar,'nl')){
+                //delete the right character in the UI
+                rightChar.remove();
+              }else{
+                //cursor is already at the end of the line... merge with next line
+                var thisTr=cr.parent().parent(); var nextTr=thisTr.next();
+                //if there is a next line
+                if(nextTr.length>0){
+                  mergeAdjacentTrRows(thisTr,nextTr); updateLineNumbers(thisTr);
+                }
+              }
             }
           };
-          //function to handle delete key release
-          var upDeleteKey=function(e){
-            upKey(e,{'ifNoSel':function(cr,pos){
-              //handle remove character
-              charDelete(e,cr);
-            }});
-          };
-          //function to handle delete key down
-          var downDeleteKey=function(e){
-            upDeleteKey(e); //handle up event if holding down the key
-            var pos=rememberPos(e); //remember this new cursor position
-            console.log('remember pos downDeleteKey');
-          };
-          //function to handle backspace release
-          var upBackspaceKey=function(e){
-            upKey(e,{'ifNoSel':function(cr,pos){
-              //handle remove character
-              charDelete(e,cr);
-            }});
-          };
-          //function to handle backspace down
-          var downBackspaceKey=function(e){
-            upBackspaceKey(e); //handle up event if holding down the key
-            var pos=rememberPos(e); //remember this new cursor position
-            console.log('remember pos downBackspaceKey');
-          };
-          //function to handle enter key release
-          var upEnterKey=function(e){
-            upKey(e,function(){ //*** passing function argument incorrectly... fix it.
-              //***
-            });
-          };
-          //function to handle enter key down
-          var downEnterKey=function(e){
-            upEnterKey(e); //handle up event if holding down the key
-            var pos=rememberPos(e); //remember this new cursor position
-            console.log('remember pos downEnterKey');
-          };
-          //function to handle tab key release
-          var upTabKey=function(e){
-            upKey(e,function(){
-              //***
-            });
-          };
-          //function to handle tab key down
-          var downTabKey=function(e){
-            upTabKey(e); //handle up event if holding down the key
-            var pos=rememberPos(e); //remember this new cursor position
-            console.log('remember pos downTabKey');
-          };
-          //function to handle arrow key release
-          var upArrowKey=function(e,which){
-            upKey(e,function(){
-              switch(which){
-                case 'up':
-                  //***
-                  break;
-                case 'right':
-                  //***
-                  break;
-                case 'down':
-                  //***
-                  break;
-                case 'left':
-                  //***
-                  break;
-              }
-            });
-          };
-          //function to handle arrow key down
-          var downArrowKey=function(e,which){
-            upArrowKey(e,which); //handle up event if holding down the key
-            var pos=rememberPos(e); //remember this new cursor position
-            console.log('remember pos downArrowKey');
-          };
-          //function to handle character key release
-          var upCharKey=function(e){
-            upKey(e,function(){
-              //***
-            });
-          };
-          //function to handle character key down
-          var downCharKey=function(e){
-            upCharKey(e); //handle up event if holding down the key
-            var pos=rememberPos(e); //remember this new cursor position
-            console.log('remember pos downCharKey');
+          //function: remove MORE THAN ONE character
+          var removeUiChars=function(cr){
+            //***
           };
         //==ATTACH EVENTS==
           //mouse up event
@@ -1522,60 +1585,102 @@ var cleanEditor={
               deselect();
             }
           });
+          //handle routing to the correct key action handler
+          var taKeyed=function(e,eType){
+            //set the new textarea state (if changed)
+            trackTaStateChanges(e,eType);
+            //if anything changed in the textarea
+            if(taState['changed']['anything']){
+              console.log('EVENT: '+eType);
+              //get the ui cursor
+              var cr=getCur();
+              //if the text value changed
+              if(taState['changed']['val']['flag']){
+                //get the number of characters removed or added
+                var charDiff=taState['changed']['val']['difference'];
+                //delete the removed selected characters, if any
+                var numSelDel=deleteSelectedUiChars(cr);
+                //depending on how the value was changed
+                switch(taState['changed']['val']['detail']){
+                  case '+': //new text written (excluding deleted selected characters)
+                    console.log(charDiff+' chars ADDED');
+                    //***
+                    break;
+                  case '-': //existing text deleted
+                    console.log(charDiff+' chars REMOVED');
+                    //subtract the selected characters that were already deleted
+                    charDiff-=numSelDel;
+                    console.log(charDiff+' more chars to REMOVE');
+                    //if there are any characters left to delete
+                    if(charDiff>0){
+                      //if only one character removed
+                      if(charDiff==1){
+                        //remove one character either right or left of the ui cursor
+                        removeOneUiChar(cr);
+                      }else{
+                        //remove all of the characters that were deleted, probably with a special key combo, eg: alt+delete
+                        removeUiChars(cr);
+                      }
+                    }
+                    break;
+                }
+              }else{
+                //text VALUE did NOT change...
+
+                //if the cursor position changed
+                if(taState['changed']['start']['flag']){
+                  //get the number of character spaces moved
+                  var moveDiff=taState['changed']['start']['difference'];
+                  //depending on how the value was changed
+                  switch(taState['changed']['start']['detail']){
+                    case '+': //cursor moved right
+                      console.log(moveDiff+' moved RIGHT');
+                      //***
+                      break;
+                    case '-': //cursor moved left
+                      console.log(moveDiff+' moved LEFT');
+                      //***
+                      break;
+                  }
+                }
+                //if the selection range changed
+                if(taState['changed']['count_selected']['flag']){
+                  //if there are any selected characters
+                  if(taState['has_selected']){
+                    //align the ui with selected characters in the textarea
+                    //***
+                  }else{
+                    //no more selected characters...
+                    deselect();
+                  }
+                }
+              }
+            }
+          };
           //keydown textarea
           ta.keydown(function(e){
             stopBubbleUp(e);
-            switch(e.keyCode){
-              case 8: //back-space
-                downBackspaceKey(e); break;
-              case 46: //delete key
-                downDeleteKey(e); break;
-              case 13: //enter key
-                downEnterKey(e); break;
-              case 16: //shift key
-                break;
-              case 27: //escape key break;
-              case 9: //tab key
-                downTabKey(e); break;
-              case 37: //left arrow
-                downArrowKey(e,'left'); break;
-              case 38: //up arrow
-                downArrowKey(e,'up'); break;
-              case 39: //right arrow
-                downArrowKey(e,'right'); break;
-              case 40: //down arrow
-                downArrowKey(e,'down'); break;
-              default:
-                downCharKey(e); break;
-            }
+            taKeyed(e,'down');
           });
-          //keypress textarea
+          //keyup textarea
           ta.keyup(function(e){
             stopBubbleUp(e);
-            switch(e.keyCode){
-              case 8: //back-space
-                upBackspaceKey(e); break;
-              case 46: //delete key
-                upDeleteKey(e); break;
-              case 13: //enter key
-                upEnterKey(e); break;
-              case 16: //shift key
-                break;
-              case 27: //escape key
-                break;
-              case 9: //tab key
-                upTabKey(e); break;
-              case 37: //left arrow
-                upArrowKey(e,'left'); break;
-              case 38: //up arrow
-                upArrowKey(e,'up'); break;
-              case 39: //right arrow
-                upArrowKey(e,'right'); break;
-              case 40: //down arrow
-                upArrowKey(e,'down'); break;
-              default:
-                upCharKey(e); break;
-            }
+            taKeyed(e,'keyup');
+          });
+          //keypress textarea
+          ta.keypress(function(e){
+            stopBubbleUp(e);
+            taKeyed(e,'keypress');
+          });
+          //change textarea
+          ta.change(function(e){
+            stopBubbleUp(e);
+            taKeyed(e,'change');
+          });
+          //paste textarea
+          ta.on('paste',function(e){
+            stopBubbleUp(e);
+            taKeyed(e,'paste');
           });
         //==FUNCTIONS TO DISPLAY UI TEXT==
           //convert a string text to something that can be dislayed in the ui
