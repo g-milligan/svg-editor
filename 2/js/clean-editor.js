@@ -1630,26 +1630,40 @@ var cleanEditor={
 
                 //if the cursor position changed
                 if(taState['changed']['start']['flag']){
-                  //get the number of character spaces moved
-                  var moveDiff=taState['changed']['start']['difference'];
-                  //depending on how the value was changed
-                  switch(taState['changed']['start']['detail']){
-                    case '+': //cursor moved right
-                      console.log(moveDiff+' moved RIGHT');
-                      //***
-                      break;
-                    case '-': //cursor moved left
-                      console.log(moveDiff+' moved LEFT');
-                      //***
-                      break;
+                  //if nothing is selected (just cursor movement, without selection)
+                  if(!taState['has_selected']){
+                    //get the number of character spaces moved
+                    var moveDiff=taState['changed']['start']['difference'];
+                    //depending on how the value was changed
+                    switch(taState['changed']['start']['detail']){
+                      case '+': //cursor moved right
+                        console.log(moveDiff+' moved RIGHT');
+                        //***
+                        break;
+                      case '-': //cursor moved left
+                        console.log(moveDiff+' moved LEFT');
+                        //***
+                        break;
+                    }
                   }
                 }
                 //if the selection range changed
                 if(taState['changed']['count_selected']['flag']){
-                  //if there are any selected characters
+                  //if there ARE any selected characters
                   if(taState['has_selected']){
-                    //align the ui with selected characters in the textarea
-                    //***
+                    //get the number of additional/less selected
+                    var selDiff=taState['changed']['count_selected']['difference'];
+                    //depending on how the value was changed
+                    switch(taState['changed']['count_selected']['detail']){
+                      case '+': //additional characters selected
+                        console.log(selDiff+' more characters selected');
+                        //***
+                      break;
+                      case '-': //some characters deselected
+                        console.log(selDiff+' less characters selected');
+                        //***
+                      break;
+                    }
                   }else{
                     //no more selected characters...
                     deselect();
