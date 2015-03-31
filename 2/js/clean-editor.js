@@ -320,7 +320,7 @@ var cleanEditor={
             return cursorPos;
           };
         //==EVENT HANDLERS==
-          //function to create a line break at the cursor
+          /*//function to create a line break at the cursor
           var breakAtCursor=function(cr){
             if(cr==undefined||cr.length<1){
               cr=getCur();
@@ -342,7 +342,55 @@ var cleanEditor={
               nextChar=cr.next();
             }
             return newTr;
-          }
+          }*/
+          //for each newline character in td.code, break to the next line
+          var breakAtNewlines=function(codeTd,startIndex){
+            //if startIndex (within the td.code line) was given
+            var startIndex, resolveChars;
+            if(startIndex!=undefined){
+              //if index is greater than zero
+              if(startIndex>0){
+                //index is valid... use it to select the characters, including and after the given index, within the code line
+                resolveChars=codeTd.children(':gt('+(startIndex-1)+')');
+              }
+            }
+            //if haven't gotten the row of character elements yet
+            if(resolveChars==undefined){
+              //no start index... start character loop at index 0 as usual
+              resolveChars=codeTd.children();
+            }
+            //loop through characters (in a row) to check for nl characters (break-points)
+            var rowIndex=0;
+            resolveChars.each(function(c){
+              //add the row index class to this character
+              var char=jQuery(this);
+              if(rowIndex>0){
+                char.addClass('new-row-'+rowIndex);
+              }
+              //if this is a newline character
+              if(isTag(char,'nl')){
+                //next row for the next character
+                rowIndex++;
+              }
+            });
+            //remove one extra row index
+            if(rowIndex>0){rowIndex--;}
+            //if any new rows are needed
+            if(rowIndex>0){
+              //get the current row (to append a new row after)
+              var addAfterTr=codeTd.parent();
+              //for each new row to create
+              for(var r=1;r<=rowIndex;r++){
+                var rClass='new-row-'+r;
+                //create the new tr row after the addAfterTr element
+                addAfterTr=privObj.appendUiRow(-1,'',addAfterTr);
+                //insert the characters into the new row
+                var newCodeTd=addAfterTr.children('td.code:last');
+                newCodeTd.children().remove();
+                newCodeTd.append(resolveChars.filter('.'+rClass).removeClass(rClass));
+              }
+            }
+          };
           //function to update the line numbers starting at a given tr element
           var updateLineNumbers=function(startTr){
             var updateCount=0;
@@ -829,37 +877,7 @@ var cleanEditor={
                     //==MERGE TR ELEMENTS THAT LOST THEIR NEWLINE CHARACTER==
                     mergeAdjacentTrRows(selTrs.eq(0));
                     //==ADD NEW CODE LINE ROWS AFTER EACH NEWLINE CHARACTER IN THE DRAG-TO ROW==
-                    var rowIndex=0;
-                    //for each character in this row (where the selected characters were moved)
-                    var resolveChars=selChars.eq(0).parent().children();
-                    resolveChars.each(function(){
-                      //add the row index class to this character
-                      var char=jQuery(this);
-                      if(rowIndex>0){
-                        char.addClass('new-row-'+rowIndex);
-                      }
-                      //if this is a newline character
-                      if(isTag(char,'nl')){
-                        //next row for the next character
-                        rowIndex++;
-                      }
-                    });
-                    if(rowIndex>0){rowIndex--;}
-                    //if any new rows are needed
-                    if(rowIndex>0){
-                      //get the current row (to append a new row after)
-                      var addAfterTr=selChars.eq(0).parent().parent();
-                      //for each new row to create
-                      for(var r=1;r<=rowIndex;r++){
-                        var rClass='new-row-'+r;
-                        //create the new tr row after the addAfterTr element
-                        addAfterTr=privObj.appendUiRow(-1,'',addAfterTr);
-                        //insert the characters into the new row
-                        var newCodeTd=addAfterTr.children('td.code:last');
-                        newCodeTd.children().remove();
-                        newCodeTd.append(resolveChars.filter('.'+rClass).removeClass(rClass));
-                      }
-                    }
+                    breakAtNewlines(selChars.eq(0).parent());
                     //==CLEAN UP NEWLINE CHARACTERS
                     cleanNlChars(nlChars);
                     //==UPDATE THE LINE NUMBERS==
@@ -1358,7 +1376,7 @@ var cleanEditor={
           //function to add the eents to characters
           var evsChars=function(lineChars){
             //filter out line characters that ALREADY have these events
-            lineChars=lineChars.not('.evs'); lineChars.addClass('evs');
+            lineChars=lineChars.not('.evs').not('c'); lineChars.addClass('evs');
             //attach line character events
             lineChars.mousedown(function(e){
               stopBubbleUp(e);
@@ -1402,6 +1420,7 @@ var cleanEditor={
                 setUiCurByChar(e,lineChar);
               });
             });
+            return lineChars;
           };
           privObj['evsChars']=evsChars;
           //function to add the events to any element under the tr, that doesn't already have the events
@@ -1454,6 +1473,7 @@ var cleanEditor={
             });
             //character events
             evsChars(tr.children('td:last').children());
+            return tr;
           };
           privObj['evsTr']=evsTr;
           //function that deletes selected ui characters in order to align with the deleted textarea characters
@@ -1538,53 +1558,13 @@ var cleanEditor={
           var removeUiChars=function(cr){
             //***
           };
-        //==ATTACH EVENTS==
-          //mouse up event
-          jQuery('body:first').mouseup(function(e){
-            dragStop(e);
-            dragSelStop(e);
-            deselect();
-          });
-          jQuery('body:first').mouseleave(function(e){
-            dragStop(e);
-            dragSelStop(e);
-          });
-          jQuery('body:first').mousemove(function(e){
-            if(wrap.hasClass('drag')){
-              //if dragging selected text
-              if(wrap.hasClass('drag-sel')){
-                followMouseDrag(e);
-              }else{
-                //NOT dragging selected text
-                setUiSelected(e);
-              }
-            }
-          });
-          wrap.mousedown(function(e){
-            dragStart(e);
-            deselect();
-          });
-          wrap.mouseup(function(e){
-            editorMouseRelease(e,wrap,function(){
-              //set the cursor at the end of the document
-              setUiCurAtEnd();
-            });
-          });
-          //src text gains focus by itself (tab entry?)
-          ta.focus(function(e){
-            stopBubbleUp(e);
-            focusOn(e,jQuery(this));
-          });
-          //src text loses focus
-          ta.blur(function(e){
-            stopBubbleUp(e);
-            focusOff(e,jQuery(this));
-            //if cursor is not over any td.code or character element
-            if(uibody.find('.over:first').length<1){
-              //deselect any ui text (if any is selected)
-              deselect();
-            }
-          });
+          //function: get the added text
+          var getTaAddedStr=function(numCharsAdded){
+            //get the start index (before/left of the caret position)
+            var startIndex=taState['start']-numCharsAdded;
+            //get the string between the start index and caret cursor
+            return taState['val'].substring(startIndex, startIndex+numCharsAdded);
+          };
           //handle routing to the correct key action handler
           var taKeyed=function(e,eType){
             //set the new textarea state (if anything changed)
@@ -1603,8 +1583,29 @@ var cleanEditor={
                 //depending on how the value was changed
                 switch(taState['changed']['val']['detail']){
                   case '+': //new text written (excluding deleted selected characters)
-                    console.log(charDiff+' chars ADDED');
-                    //***
+                    //get the text that was added to the textarea
+                    var addedStr=getTaAddedStr(charDiff);
+                    //if the text is not blank (shouldn't be; length should === charDiff)
+                    if(addedStr.length>0){
+                      //added string contains newline?
+                      var hasNl=addedStr.indexOf('\n')!==-1;
+                      //insert the html markup into the added string
+                      addedStr=privObj.toUiStr(addedStr);
+                      //add the new UI html left of/before the cursor
+                      cr.before(addedStr);
+                      //get the NEW elements AND attach events at the same time
+                      var td=cr.parent();
+                      var newLets=evsChars(td.children());
+                      //if the added string contains one or more newline characters
+                      if(hasNl){
+                        //add line breaks, as needed, starting at the first added letter's index
+                        breakAtNewlines(td,newLets.eq(0).index());
+                        //clean up newline character weirdness
+                        cleanNlChars(newLets.filter('nl'));
+                        //update the changed line numbers
+                        updateLineNumbers(td.parent());
+                      }
+                    }
                     break;
                   case '-': //existing text deleted
                     console.log(charDiff+' chars REMOVED');
@@ -1657,6 +1658,53 @@ var cleanEditor={
               }
             }
           };
+        //==ATTACH EVENTS==
+          //mouse up event
+          jQuery('body:first').mouseup(function(e){
+            dragStop(e);
+            dragSelStop(e);
+            deselect();
+          });
+          jQuery('body:first').mouseleave(function(e){
+            dragStop(e);
+            dragSelStop(e);
+          });
+          jQuery('body:first').mousemove(function(e){
+            if(wrap.hasClass('drag')){
+              //if dragging selected text
+              if(wrap.hasClass('drag-sel')){
+                followMouseDrag(e);
+              }else{
+                //NOT dragging selected text
+                setUiSelected(e);
+              }
+            }
+          });
+          wrap.mousedown(function(e){
+            dragStart(e);
+            deselect();
+          });
+          wrap.mouseup(function(e){
+            editorMouseRelease(e,wrap,function(){
+              //set the cursor at the end of the document
+              setUiCurAtEnd();
+            });
+          });
+          //src text gains focus by itself (tab entry?)
+          ta.focus(function(e){
+            stopBubbleUp(e);
+            focusOn(e,jQuery(this));
+          });
+          //src text loses focus
+          ta.blur(function(e){
+            stopBubbleUp(e);
+            focusOff(e,jQuery(this));
+            //if cursor is not over any td.code or character element
+            if(uibody.find('.over:first').length<1){
+              //deselect any ui text (if any is selected)
+              deselect();
+            }
+          });
           //keydown textarea
           ta.keydown(function(e){
             stopBubbleUp(e);
@@ -1698,6 +1746,9 @@ var cleanEditor={
                   case '\t':
                     ret+='<t>&nbsp;</t>';
                     break;
+                  case '\n':
+                    ret+='<nl>&nbsp;</nl>';
+                    break;
                   case '<':
                     ret+='<l>&lt;</l>';
                     break;
@@ -1712,6 +1763,7 @@ var cleanEditor={
             }
             return ret;
           };
+          privObj['toUiStr']=toUiStr;
           //return UI row html from raw rowTxtl
           var appendUiRow=function(rowNum,rowTxt,afterTr){
             var newRow;

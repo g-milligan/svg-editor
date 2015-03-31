@@ -46,7 +46,7 @@ cleaneditor.drag-sel editorui td.code > c:before{box-shadow:0 0 .5rem rgb(0, 137
 
 cleaneditor editorui t{letter-spacing:1.2rem;}
 cleaneditor editorui nl{letter-spacing:1rem;}
-cleaneditor editorui sp{letter-spacing:.7rem;}
+cleaneditor editorui sp{letter-spacing:.3rem;}
 
 /*debug testing*/
 cleaneditor.debug editorui{top:100%;border:solid 1px #000;}
