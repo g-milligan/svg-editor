@@ -534,6 +534,9 @@ var cleanEditor={
               td1.children('nl').not('nl:last').remove();
             }
           };
+          var removeLastRowNlSel=function(){
+            uibody.children('tr:last').removeClass('nl-sel').children('td.code:last').children('nl:last').removeClass('sel');
+          };
           //make sure nl characters are NOT doubled up AND the nl-sel classes are correct
           var cleanNlChars=function(nlChars){
             //if newline characters given
@@ -566,7 +569,8 @@ var cleanEditor={
                 }
               });
             }
-            uibody.children('tr:last').removeClass('nl-sel').children('td.code:last').children('nl:last').removeClass('sel');
+            //last row's newline character cannot be selected
+            removeLastRowNlSel();
           };
           //when the editor receives focus or SHOULD receive focus
           var focusOn=function(e,elem){
@@ -1195,8 +1199,8 @@ var cleanEditor={
                         break;
                     }
                     endElem.removeClass('end-sel'); endTr.removeClass('end-sel');
-                    //the last line shouldn't show having a newline character
-                    uibody.children('tr:last').removeClass('nl-sel').children('td.code:last').children('nl:last').removeClass('sel');
+                    //last row's newline character cannot be selected
+                    removeLastRowNlSel();
                   }
                 }
               }
@@ -1252,7 +1256,8 @@ var cleanEditor={
             //select the ui code line
             lineTd.children().addClass('sel');
             lineTd.parent().addClass('nl-sel');
-            uibody.children('tr:last').removeClass('nl-sel').children('td.code:last').children('nl:last').removeClass('sel');
+            //last row's newline character cannot be selected
+            removeLastRowNlSel();
             //clear the cahced selected range and update the textarea with a new selected range
             selRange=undefined;
             setTextareaSelected();
@@ -1565,6 +1570,101 @@ var cleanEditor={
             //get the string between the start index and caret cursor
             return taState['val'].substring(startIndex, startIndex+numCharsAdded);
           };
+          //given a number of characters, move the selection that amount
+          var moveSel=function(plusMinus,numChars,selChars,cr){
+            if(selChars===undefined){selChars=uibody.find('tr td.code .sel');}
+
+            //if the left end of the selection changed (start position moved)
+            var whichEnd='right';
+            if(taState['changed']['start']['flag']){
+              //START changed... so that means the left side of the selection range changed
+              whichEnd='left';
+            }
+            //figure out if more or less characters should be selected
+            switch(plusMinus){
+              case '+': //select more characters
+                //if selecting characters on the left side
+                if(whichEnd==='left'){
+                  //get the first letter to select
+                  var char=selChars.eq(0).prev();
+                  if(char.length<1){
+                    if(cr===undefined){cr=getCur();}
+                    char=cr.prev();
+                  }
+                  //get the current tr element
+                  var charTr=selChars.eq(0).parent().parent();
+                  //for each character to select
+                  for(var s=0;s<numChars;s++){
+                    //if at the start of the line (must jump to new line)
+                    var isNl=false;
+                    if(char.length<1){
+                      //try to jump to the previous line
+                      charTr=charTr.prev();
+                      //if there is no previous line
+                      if(charTr.length<1){
+                        //stop this loop... no more letters to select beyond this point
+                        break;
+                      }
+                      //get the end character of the new line
+                      char=charTr.children('td.code:last').children(':last');
+                      //this char will be a newline character
+                      isNl=true;
+                    }
+                    //select this character
+                    char.addClass('sel');
+                    //if this is a newline character
+                    if(isNl){
+                      //select the row since the newline is selected
+                      char.parent().parent().addClass('nl-sel');
+                    }
+                    //next
+                    char=char.prev();
+                  }
+                }else{
+                  //selecting characters on the right side... for each to select
+                  var char=selChars.filter(':last').next();
+                  for(var s=0;s<numChars;s++){
+                    //***
+                  }
+                }
+                //the cursor should be removed when things are selected
+                cr.remove();
+                //the very last nl character cannot be selected
+                removeLastRowNlSel();
+              break;
+              case '-': //deselect some characters
+                //if there are any selected characters
+                if(selChars.length>0){
+                  var getCharIndex;
+                  //if deselecting characters on the left side
+                  if(whichEnd==='left'){
+                    //select character index from the left side
+                    getCharIndex=function(index){return index;};
+                  }else{
+                    //select character index from the right side
+                    var numSel=selChars.length;
+                    getCharIndex=function(index){return numSel-index-1;};
+                  }
+                  //for each character to deselect
+                  for(var d=0;d<numChars;d++){
+                    //get the character index, depending on left-to-right or the oposite
+                    var index=getCharIndex(d);
+                    //deselect the character at this index
+                    var oneChar=selChars.eq(index);
+                    oneChar.removeClass('sel');
+                    //make sure cursor is there if nothing is selected
+                    //***
+                    //if this is a newline character
+                    if(isTag(oneChar,'nl')){
+                      //deselect this row
+                      oneChar.parent().parent().removeClass('nl-sel');
+                    }
+                  }
+                }
+              break;
+            }
+            return selChars;
+          };
           //given a number of characters, move the cursor that amount
           var moveCur=function(plusMinus,numChars,cr){
             if(cr===undefined){cr=getCur();}
@@ -1725,17 +1825,21 @@ var cleanEditor={
                 if(taState['changed']['count_selected']['flag']){
                   //if there ARE any selected characters
                   if(taState['has_selected']){
+                    //get the selected characters
+                    selChars=uibody.find('tr td.code .sel');
                     //get the number of additional/less selected
                     var selDiff=taState['changed']['count_selected']['difference'];
                     //depending on how the value was changed
                     switch(taState['changed']['count_selected']['detail']){
                       case '+': //additional characters selected
                         console.log(selDiff+' more characters selected');
-                        //***
+                        //select more characters
+                        moveSel('+',selDiff,selChars,cr);
                       break;
                       case '-': //some characters deselected
                         console.log(selDiff+' less characters selected');
-                        //***
+                        //deselect some characters
+                        moveSel('-',selDiff,selChars,cr);
                       break;
                     }
                   }else{
