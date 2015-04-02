@@ -2,7 +2,11 @@ This project has changed. It no longer focuses exclusively on SVG.
 
 Now, I'm working on a javascript/jQuery plugin called cleanEditor. 
 
-You can see a working demo and description on the gh-pages branch, here: 
+This project is similar to https://github.com/ajaxorg/ace
+
+Ace looks like it's very mature compared to this project. I'm considering building off of Ace and abandoning cleanEditor. Ace was put together by a larger development team and looks very well done. 
+
+cleanEditor: You can see a working demo and description on the gh-pages branch, here: 
 
 <a target="_blank" href="http://g-milligan.github.io/svg-editor/">cleanEditor working demo</a>
 
