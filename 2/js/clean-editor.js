@@ -1573,7 +1573,6 @@ var cleanEditor={
           //given a number of characters, move the selection that amount
           var moveSel=function(plusMinus,numChars,selChars,cr){
             if(selChars===undefined){selChars=uibody.find('tr td.code .sel');}
-
             //if the left end of the selection changed (start position moved)
             var whichEnd='right';
             if(taState['changed']['start']['flag']){
@@ -1584,57 +1583,64 @@ var cleanEditor={
             switch(plusMinus){
               case '+': //select more characters
                 //if selecting characters on the left side
+                var getNext, getEndChar, getJumpChar;
                 if(whichEnd==='left'){
-                  //get the first letter to select
-                  var char=selChars.eq(0).prev();
-                  if(char.length<1){
-                    if(cr===undefined){cr=getCur();}
-                    char=cr.prev();
-                  }
-                  //get the current tr element
-                  var charTr=selChars.eq(0).parent().parent();
-                  //for each character to select
-                  for(var s=0;s<numChars;s++){
-                    //if at the start of the line (must jump to new line)
-                    var isNl=false;
-                    if(char.length<1){
-                      //try to jump to the previous line
-                      charTr=charTr.prev();
-                      //if there is no previous line
-                      if(charTr.length<1){
-                        //stop this loop... no more letters to select beyond this point
-                        break;
-                      }
-                      //get the end character of the new line
-                      char=charTr.children('td.code:last').children(':last');
-                      //this char will be a newline character
-                      isNl=true;
-                    }
-                    //select this character
-                    char.addClass('sel');
-                    //if this is a newline character
-                    if(isNl){
-                      //select the row since the newline is selected
-                      char.parent().parent().addClass('nl-sel');
-                    }
-                    //next
-                    char=char.prev();
-                  }
+                  getJumpChar=function(chars){return chars.filter(':last');};
+                  getEndChar=function(chars){return chars.filter(':first');};
+                  getNext=function(el){return el.prev();};
                 }else{
-                  //selecting characters on the right side... for each to select
-                  var char=selChars.filter(':last').next();
-                  for(var s=0;s<numChars;s++){
-                    //***
-                  }
+                  getJumpChar=function(chars){return chars.filter(':first');};
+                  getEndChar=function(chars){return chars.filter(':last');};
+                  getNext=function(el){return el.next();};
+                }
+                //if there are ANY selected ui characters
+                var char, charTr;
+                if(selChars.length>0){
+                  //get the last SELECTED ui character
+                  var lastSel=getEndChar(selChars);
+                  //get the NEXT line character AFTER that (if any)
+                  char=getNext(lastSel);
+                  //get the parent tr of the last SELECTED character
+                  charTr=lastSel.parent().parent();
+                }else{
+                  //no selected characters... get the next character after the CURSOR, if any
+                  char=getNext(cr);
+                  //get the parent tr of the CURSOR
+                  charTr=cr.parent().parent();
                 }
                 //the cursor should be removed when things are selected
                 cr.remove();
+                //for each character to select
+                for(var s=0;s<numChars;s++){
+                  //if at the start of the line (if so, jump to a new line)
+                  if(char.length<1){
+                    //try to jump to the previous line
+                    charTr=getNext(charTr);
+                    //if there is no previous line
+                    if(charTr.length<1){
+                      //stop this loop... no more letters to select beyond this point
+                      break;
+                    }
+                    //get the end character of the new line
+                    char=getJumpChar(charTr.children('td.code:last').children());
+                  }
+                  //select this character
+                  char.addClass('sel');
+                  //if this is a newline character
+                  if(isTag(char,'nl')){
+                    //select the row since end character, newline, is selected
+                    char.parent().parent().addClass('nl-sel');
+                  }
+                  //next
+                  char=getNext(char);
+                }
                 //the very last nl character cannot be selected
                 removeLastRowNlSel();
               break;
               case '-': //deselect some characters
                 //if there are any selected characters
-                if(selChars.length>0){
+                var numSel=selChars.length;
+                if(numSel>0){
                   var getCharIndex;
                   //if deselecting characters on the left side
                   if(whichEnd==='left'){
@@ -1642,7 +1648,6 @@ var cleanEditor={
                     getCharIndex=function(index){return index;};
                   }else{
                     //select character index from the right side
-                    var numSel=selChars.length;
                     getCharIndex=function(index){return numSel-index-1;};
                   }
                   //for each character to deselect
@@ -1652,8 +1657,6 @@ var cleanEditor={
                     //deselect the character at this index
                     var oneChar=selChars.eq(index);
                     oneChar.removeClass('sel');
-                    //make sure cursor is there if nothing is selected
-                    //***
                     //if this is a newline character
                     if(isTag(oneChar,'nl')){
                       //deselect this row
